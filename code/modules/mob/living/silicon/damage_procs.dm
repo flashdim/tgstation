@@ -1,37 +1,32 @@
+/mob/living/silicon/apply_effect(effect = 0,effecttype = EFFECT_STUN, blocked = FALSE)
+	return FALSE //The only effect that can hit them atm is flashes and they still directly edit so this works for now. (This was written in at least 2016. Help)
 
-/mob/living/silicon/apply_damage(damage = 0,damagetype = BRUTE, def_zone = null, blocked = 0)
-	var/hit_percent = (100-blocked)/100
-	if(!damage || (hit_percent <= 0))
-		return 0
-	switch(damagetype)
-		if(BRUTE)
-			adjustBruteLoss(damage * hit_percent)
-		if(BURN)
-			adjustFireLoss(damage * hit_percent)
-		if(OXY)
-			if(damage < 0) //we shouldn't be taking oxygen damage through this proc, but we'll let it heal.
-				adjustOxyLoss(damage * hit_percent)
-	return 1
-
-
-/mob/living/silicon/apply_effect(effect = 0,effecttype = STUN, blocked = 0)
-	return 0 //The only effect that can hit them atm is flashes and they still directly edit so this works for now
-
-/mob/living/silicon/adjustToxLoss(amount, updating_health = TRUE, forced = FALSE) //immune to tox damage
+/mob/living/silicon/adjustToxLoss(amount, updating_health = TRUE, forced = FALSE, required_biotype) //immune to tox damage
 	return FALSE
 
-/mob/living/silicon/setToxLoss(amount, updating_health = TRUE, forced = FALSE)
+/mob/living/silicon/setToxLoss(amount, updating_health = TRUE, forced = FALSE, required_biotype)
 	return FALSE
 
-/mob/living/silicon/adjustCloneLoss(amount, updating_health = TRUE, forced = FALSE) //immune to clone damage
+/mob/living/silicon/adjustStaminaLoss(amount, updating_stamina = TRUE, forced = FALSE, required_biotype) //immune to stamina damage.
 	return FALSE
 
-/mob/living/silicon/setCloneLoss(amount, updating_health = TRUE, forced = FALSE)
+/mob/living/silicon/setStaminaLoss(amount, updating_stamina = TRUE, forced = FALSE, required_biotype)
 	return FALSE
 
-/mob/living/silicon/adjustStaminaLoss(amount, updating_stamina = 1)//immune to stamina damage.
-	return
+/mob/living/silicon/adjustOrganLoss(slot, amount, maximum = 500, required_organ_flag) //immune to organ damage (no organs, duh)
+	return FALSE
 
-/mob/living/silicon/setStaminaLoss(amount, updating_stamina = 1)
-	return
+/mob/living/silicon/setOrganLoss(slot, amount)
+	return FALSE
 
+/mob/living/silicon/adjustOxyLoss(amount, updating_health = TRUE, forced = FALSE, required_biotype, required_respiration_type) //immune to oxygen damage
+	if(isAI(src)) //ais are snowflakes and use oxyloss for being in AI cards and having no battery
+		return ..()
+
+	return FALSE
+
+/mob/living/silicon/setOxyLoss(amount, updating_health = TRUE, forced = FALSE, required_biotype)
+	if(isAI(src)) //ditto
+		return ..()
+
+	return FALSE

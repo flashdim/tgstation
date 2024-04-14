@@ -1,122 +1,88 @@
-/*
-	The broadcaster sends processed messages to all radio devices in the game. They
-	do not have to be headsets; intercoms and station-bounced radios suffice.
+/// Global list of recent messages broadcasted : used to circumvent massive radio spam
+GLOBAL_LIST_EMPTY(recent_messages)
+/// Used to make sure restarting the recent_messages list is kept in sync.
+GLOBAL_VAR_INIT(message_delay, FALSE)
 
-	They receive their message from a server after the message has been logged.
-*/
-
-GLOBAL_LIST_EMPTY(recentmessages) // global list of recent messages broadcasted : used to circumvent massive radio spam
-GLOBAL_VAR_INIT(message_delay, 0) // To make sure restarting the recentmessages list is kept in sync
-
+/**
+ * The broadcaster sends processed messages to all radio devices in the game. They
+ * do not have to be headsets; intercoms and station-bounced radios suffice.
+ *
+ * They receive their message from a server after the message has been logged.
+ */
 /obj/machinery/telecomms/broadcaster
 	name = "subspace broadcaster"
 	icon_state = "broadcaster"
 	desc = "A dish-shaped machine used to broadcast processed subspace signals."
-	density = 1
-	anchored = 1
-	use_power = 1
-	idle_power_usage = 25
-	machinetype = 5
-	/*heatgen = 0
-	delay = 7*/
+	telecomms_type = /obj/machinery/telecomms/broadcaster
+	density = TRUE
+	idle_power_usage = BASE_MACHINE_IDLE_CONSUMPTION * 0.01
+	circuit = /obj/item/circuitboard/machine/telecomms/broadcaster
 
-/obj/machinery/telecomms/broadcaster/receive_information(datum/signal/signal, obj/machinery/telecomms/machine_from)
+/obj/machinery/telecomms/broadcaster/receive_information(datum/signal/subspace/signal, obj/machinery/telecomms/machine_from)
+	if(!istype(signal))
+		return
+
 	// Don't broadcast rejected signals
 	if(signal.data["reject"])
 		return
+	if(!signal.data["message"])
+		return
 
-	if(signal.data["message"])
+	var/signal_message = "[signal.frequency]:[signal.data["message"]]:[signal.data["name"]]"
+	if(signal_message in GLOB.recent_messages)
+		return
 
+	// Prevents massive radio spam
+	signal.mark_done()
+	var/datum/signal/subspace/original = signal.original
+	if(original && ("compression" in signal.data))
+		original.data["compression"] = signal.data["compression"]
 
-		// Prevents massive radio spam
-		signal.data["done"] = 1 // mark the signal as being broadcasted
-		// Search for the original signal and mark it as done as well
-		var/datum/signal/original = signal.data["original"]
-		if(original)
-			original.data["done"] = 1
-			original.data["compression"] = signal.data["compression"]
-			original.data["level"] = signal.data["level"]
+	var/turf/current_turf = get_turf(src)
+	if (current_turf)
+		signal.levels |= SSmapping.get_connected_levels(current_turf)
 
-		var/signal_message = "[signal.frequency]:[signal.data["message"]]:[signal.data["realname"]]"
-		if(signal_message in GLOB.recentmessages)
-			return
-		GLOB.recentmessages.Add(signal_message)
+	GLOB.recent_messages.Add(signal_message)
 
-		if(signal.data["slow"] > 0)
-			sleep(signal.data["slow"]) // simulate the network lag if necessary
+	if(signal.data["slow"] > 0)
+		sleep(signal.data["slow"]) // simulate the network lag if necessary
 
-		signal.data["level"] |= listening_level
+	signal.broadcast()
 
-	   /** #### - Normal Broadcast - #### **/
+	if(!GLOB.message_delay)
+		GLOB.message_delay = TRUE
+		addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(end_message_delay)), 1 SECONDS)
 
-		if(signal.data["type"] == 0)
+	/* --- Do a snazzy animation! --- */
+	flick("broadcaster_send", src)
 
-			/* ###### Broadcast a message using signal.data ###### */
-			Broadcast_Message(signal.data["mob"],
-							  signal.data["vmask"], signal.data["radio"],
-							  signal.data["message"], signal.data["name"], signal.data["job"], signal.data["realname"],
-							  0, signal.data["compression"], signal.data["level"], signal.frequency, signal.data["spans"],
-							  signal.data["verb_say"], signal.data["verb_ask"], signal.data["verb_exclaim"], signal.data["verb_yell"], signal.data["language"])
+	use_energy(idle_power_usage)
 
-
-	   /** #### - Artificial Broadcast - #### **/
-	   			// (Imitates a mob)
-
-		if(signal.data["type"] == 2)
-
-			/* ###### Broadcast a message using signal.data ###### */
-				// Parameter "data" as 4: AI can't track this person/mob
-			Broadcast_Message(signal.data["mob"],
-							  signal.data["vmask"],
-							  signal.data["radio"], signal.data["message"],
-							  signal.data["name"], signal.data["job"],
-							  signal.data["realname"], 4, signal.data["compression"], signal.data["level"], signal.frequency, signal.data["spans"],
-							  signal.data["verb_say"], signal.data["verb_ask"], signal.data["verb_exclaim"], signal.data["verb_yell"], signal.data["language"])
-
-		if(!GLOB.message_delay)
-			GLOB.message_delay = 1
-			spawn(10)
-				GLOB.message_delay = 0
-				GLOB.recentmessages = list()
-
-		/* --- Do a snazzy animation! --- */
-		flick("broadcaster_send", src)
-
-/obj/machinery/telecomms/broadcaster/New()
-	..()
-	var/obj/item/weapon/circuitboard/machine/B = new /obj/item/weapon/circuitboard/machine/telecomms/broadcaster(null)
-	B.apply_default_parts(src)
-
-/obj/item/weapon/circuitboard/machine/telecomms/broadcaster
-	name = "Subspace Broadcaster (Machine Board)"
-	build_path = /obj/machinery/telecomms/broadcaster
-	origin_tech = "programming=2;engineering=2;bluespace=1"
-	req_components = list(
-							/obj/item/weapon/stock_parts/manipulator = 2,
-							/obj/item/stack/cable_coil = 1,
-							/obj/item/weapon/stock_parts/subspace/filter = 1,
-							/obj/item/weapon/stock_parts/subspace/crystal = 1,
-							/obj/item/weapon/stock_parts/micro_laser = 2)
+/**
+ * Simply resets the message delay and the recent messages list, to ensure that
+ * recent messages can be sent again. Is called on a one second timer after a
+ * delay is set, from `/obj/machinery/telecomms/broadcaster/receive_information()`
+ */
+/proc/end_message_delay()
+	GLOB.message_delay = FALSE
+	GLOB.recent_messages = list()
 
 /obj/machinery/telecomms/broadcaster/Destroy()
 	// In case message_delay is left on 1, otherwise it won't reset the list and people can't say the same thing twice anymore.
 	if(GLOB.message_delay)
-		GLOB.message_delay = 0
+		GLOB.message_delay = FALSE
 	return ..()
 
 
-
-//Preset Broadcasters
+// Preset Broadcasters
 
 //--PRESET LEFT--//
-
 /obj/machinery/telecomms/broadcaster/preset_left
 	id = "Broadcaster A"
 	network = "tcommsat"
 	autolinkers = list("broadcasterA")
 
 //--PRESET RIGHT--//
-
 /obj/machinery/telecomms/broadcaster/preset_right
 	id = "Broadcaster B"
 	network = "tcommsat"

@@ -4,127 +4,79 @@
 /obj/machinery/power/rtg
 	name = "radioisotope thermoelectric generator"
 	desc = "A simple nuclear power generator, used in small outposts to reliably provide power for decades."
-	icon = 'icons/obj/power.dmi'
+	icon = 'icons/obj/machines/engine/other.dmi'
 	icon_state = "rtg"
-	density = 1
-	anchored = 1
-	use_power = 0
+	density = TRUE
+	use_power = NO_POWER_USE
+	circuit = /obj/item/circuitboard/machine/rtg
 
 	// You can buckle someone to RTG, then open its panel. Fun stuff.
 	can_buckle = TRUE
-	buckle_lying = FALSE
+	buckle_lying = 0
 	buckle_requires_restraints = TRUE
 
 	var/power_gen = 1000 // Enough to power a single APC. 4000 output with T4 capacitor.
-	var/board_path = /obj/item/weapon/circuitboard/machine/rtg
-	var/irradiate = TRUE // RTGs irradiate surroundings, but only when panel is open.
 
-/obj/machinery/power/rtg/New()
-	..()
-	var/obj/item/weapon/circuitboard/machine/B = new board_path(null)
-	B.apply_default_parts(src)
-
-/obj/item/weapon/circuitboard/machine/rtg
-	name = "RTG (Machine Board)"
-	build_path = /obj/machinery/power/rtg
-	origin_tech = "programming=2;materials=4;powerstorage=3;engineering=2"
-	req_components = list(
-		/obj/item/stack/cable_coil = 5,
-		/obj/item/weapon/stock_parts/capacitor = 1,
-		/obj/item/stack/sheet/mineral/uranium = 10) // We have no Pu-238, and this is the closest thing to it.
-
-/obj/machinery/power/rtg/Initialize()
+/obj/machinery/power/rtg/Initialize(mapload)
 	. = ..()
 	connect_to_network()
 
 /obj/machinery/power/rtg/process()
-	..()
-	add_avail(power_gen)
-	if(panel_open && irradiate)
-		radiation_pulse(get_turf(src), 2, 3, 6) // Weak but noticeable.
+	add_avail(power_to_energy(power_gen))
 
 /obj/machinery/power/rtg/RefreshParts()
+	. = ..()
 	var/part_level = 0
-	for(var/obj/item/weapon/stock_parts/SP in component_parts)
-		part_level += SP.rating
+	for(var/datum/stock_part/stock_part in component_parts)
+		part_level += stock_part.tier
 
 	power_gen = initial(power_gen) * part_level
 
+/obj/machinery/power/rtg/examine(mob/user)
+	. = ..()
+	if(in_range(user, src) || isobserver(user))
+		. += span_notice("The status display reads: Power generation at <b>[display_power(power_gen, convert = FALSE)]</b>.")
+
 /obj/machinery/power/rtg/attackby(obj/item/I, mob/user, params)
-	if(exchange_parts(user, I))
-		return
-	else if(default_deconstruction_screwdriver(user, "[initial(icon_state)]-open", initial(icon_state), I))
+	if(default_deconstruction_screwdriver(user, "[initial(icon_state)]-open", initial(icon_state), I))
 		return
 	else if(default_deconstruction_crowbar(I))
 		return
 	return ..()
 
-/obj/machinery/power/rtg/attack_hand(mob/user)
-	if(user.a_intent == INTENT_GRAB && user_buckle_mob(user.pulling, user, check_loc = 0))
-		return
-	..()
-
-
 /obj/machinery/power/rtg/advanced
 	desc = "An advanced RTG capable of moderating isotope decay, increasing power output but reducing lifetime. It uses plasma-fueled radiation collectors to increase output even further."
 	power_gen = 1250 // 2500 on T1, 10000 on T4.
-	board_path = /obj/item/weapon/circuitboard/machine/rtg/advanced
-
-/obj/item/weapon/circuitboard/machine/rtg/advanced
-	name = "Advanced RTG (Machine Board)"
-	build_path = /obj/machinery/power/rtg/advanced
-	origin_tech = "programming=3;materials=5;powerstorage=4;engineering=3;plasmatech=3"
-	req_components = list(
-		/obj/item/stack/cable_coil = 5,
-		/obj/item/weapon/stock_parts/capacitor = 1,
-		/obj/item/weapon/stock_parts/micro_laser = 1,
-		/obj/item/stack/sheet/mineral/uranium = 10,
-		/obj/item/stack/sheet/mineral/plasma = 5)
-
-
+	circuit = /obj/item/circuitboard/machine/rtg/advanced
 
 // Void Core, power source for Abductor ships and bases.
 // Provides a lot of power, but tends to explode when mistreated.
 
 /obj/machinery/power/rtg/abductor
 	name = "Void Core"
-	icon = 'icons/obj/abductor.dmi'
+	icon = 'icons/obj/antags/abductor.dmi'
 	icon_state = "core"
 	desc = "An alien power source that produces energy seemingly out of nowhere."
-	board_path = /obj/item/weapon/circuitboard/machine/abductor/core
+	circuit = /obj/item/circuitboard/machine/abductor/core
 	power_gen = 20000 // 280 000 at T1, 400 000 at T4. Starts at T4.
-	irradiate = FALSE // Green energy!
 	can_buckle = FALSE
 	pixel_y = 7
 	var/going_kaboom = FALSE // Is it about to explode?
-
-/obj/item/weapon/circuitboard/machine/abductor/core
-	name = "alien board (Void Core)"
-	build_path = /obj/machinery/power/rtg/abductor
-	origin_tech = "programming=5;abductor=5;powerstorage=8;engineering=8"
-	req_components = list(
-		/obj/item/weapon/stock_parts/capacitor = 1,
-		/obj/item/weapon/stock_parts/micro_laser = 1,
-		/obj/item/weapon/stock_parts/cell/infinite/abductor = 1)
-	def_components = list(
-		/obj/item/weapon/stock_parts/capacitor = /obj/item/weapon/stock_parts/capacitor/quadratic,
-		/obj/item/weapon/stock_parts/micro_laser = /obj/item/weapon/stock_parts/micro_laser/quadultra)
 
 /obj/machinery/power/rtg/abductor/proc/overload()
 	if(going_kaboom)
 		return
 	going_kaboom = TRUE
-	visible_message("<span class='danger'>\The [src] lets out an shower of sparks as it starts to lose stability!</span>",\
-		"<span class='italics'>You hear a loud electrical crack!</span>")
-	playsound(src.loc, 'sound/magic/LightningShock.ogg', 100, 1, extrarange = 5)
-	tesla_zap(src, 5, power_gen * 0.05)
-	addtimer(CALLBACK(GLOBAL_PROC, .proc/explosion, get_turf(src), 2, 3, 4, 8), 100) // Not a normal explosion.
+	visible_message(span_danger("\The [src] lets out a shower of sparks as it starts to lose stability!"),\
+		span_hear("You hear a loud electrical crack!"))
+	playsound(src.loc, 'sound/magic/lightningshock.ogg', 100, TRUE, extrarange = 5)
+	tesla_zap(source = src, zap_range = 5, power = power_gen * 20)
+	addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(explosion), src, 2, 3, 4, null, 8), 10 SECONDS) // Not a normal explosion.
 
-/obj/machinery/power/rtg/abductor/bullet_act(obj/item/projectile/Proj)
-	..()
-	if(!going_kaboom && istype(Proj) && !Proj.nodamage && ((Proj.damage_type == BURN) || (Proj.damage_type == BRUTE)))
-		message_admins("[key_name_admin(Proj.firer)] triggered an Abductor Core explosion via projectile.")
-		log_game("[key_name(Proj.firer)] triggered an Abductor Core explosion via projectile.")
+/obj/machinery/power/rtg/abductor/bullet_act(obj/projectile/Proj)
+	. = ..()
+	if(!going_kaboom && istype(Proj) && Proj.damage > 0 && ((Proj.damage_type == BURN) || (Proj.damage_type == BRUTE)))
+		log_bomber(Proj.firer, "triggered a", src, "explosion via projectile")
 		overload()
 
 /obj/machinery/power/rtg/abductor/blob_act(obj/structure/blob/B)
@@ -136,9 +88,72 @@
 	else
 		overload()
 
+	return TRUE
+
 /obj/machinery/power/rtg/abductor/fire_act(exposed_temperature, exposed_volume)
 	overload()
 
-/obj/machinery/power/rtg/abductor/tesla_act()
-	..() //extend the zap
-	overload()
+/obj/machinery/power/rtg/abductor/zap_act(power, zap_flags)
+	. = ..() //extend the zap
+	if(zap_flags & ZAP_MACHINE_EXPLOSIVE)
+		overload()
+
+/obj/machinery/power/rtg/debug
+	name = "Debug RTG"
+	desc = "You really shouldn't be seeing this if you're not a coder or jannie."
+	power_gen = 20000
+	circuit = null
+
+/obj/machinery/power/rtg/debug/RefreshParts()
+	SHOULD_CALL_PARENT(FALSE)
+	return
+
+/obj/machinery/power/rtg/lavaland
+	name = "Lava powered RTG"
+	desc = "This device only works when exposed to the toxic fumes of Lavaland"
+	circuit = null
+	power_gen = 1500
+	anchored = TRUE
+	resistance_flags = LAVA_PROOF
+
+/obj/machinery/power/rtg/lavaland/Initialize(mapload)
+	. = ..()
+	var/turf/our_turf = get_turf(src)
+	if(!islava(our_turf))
+		power_gen = 0
+	if(!is_mining_level(z))
+		power_gen = 0
+
+/obj/machinery/power/rtg/lavaland/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
+	. = ..()
+	var/turf/our_turf = get_turf(src)
+	if(!islava(our_turf))
+		power_gen = 0
+		return
+	if(!is_mining_level(z))
+		power_gen = 0
+		return
+	power_gen = initial(power_gen)
+
+/obj/machinery/power/rtg/old_station
+	name = "Old RTG"
+	desc = "A very old RTG, it seems on the verge of being destroyed"
+	circuit = null
+	power_gen = 750
+	anchored = TRUE
+
+/obj/machinery/power/rtg/old_station/attackby(obj/item/I, mob/user, params)
+	if(default_deconstruction_screwdriver(user, "[initial(icon_state)]-open", initial(icon_state), I))
+		to_chat(user,span_warning("You feel it crumbling under your hands!"))
+		return
+	else if(default_deconstruction_crowbar(I, user = user))
+		return
+	return ..()
+
+/obj/machinery/power/rtg/old_station/default_deconstruction_crowbar(obj/item/crowbar, ignore_panel, custom_deconstruct, mob/user)
+	to_chat(user,span_warning("It's starting to fall off!"))
+	if(!do_after(user, 3 SECONDS, src))
+		return TRUE
+	to_chat(user,span_notice("You feel like you made a mistake"))
+	new /obj/effect/decal/cleanable/ash/large(loc)
+	qdel(src)

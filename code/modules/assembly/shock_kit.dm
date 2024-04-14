@@ -1,42 +1,43 @@
 /obj/item/assembly/shock_kit
 	name = "electrohelmet assembly"
 	desc = "This appears to be made from both an electropack and a helmet."
-	icon = 'icons/obj/assemblies.dmi'
+	icon = 'icons/obj/devices/assemblies.dmi'
 	icon_state = "shock_kit"
-	var/obj/item/clothing/head/helmet/part1 = null
-	var/obj/item/device/electropack/part2 = null
+	var/obj/item/clothing/head/helmet/helmet_part = null
+	var/obj/item/electropack/electropack_part = null
 	w_class = WEIGHT_CLASS_HUGE
-	flags = CONDUCT
+	obj_flags = CONDUCTS_ELECTRICITY
 
 /obj/item/assembly/shock_kit/Destroy()
-	qdel(part1)
-	qdel(part2)
+	QDEL_NULL(helmet_part)
+	QDEL_NULL(electropack_part)
 	return ..()
 
-/obj/item/assembly/shock_kit/attackby(obj/item/weapon/W, mob/user, params)
-	if(istype(W, /obj/item/weapon/wrench))
-		var/turf/T = loc
-		if(ismob(T))
-			T = T.loc
-		part1.loc = T
-		part2.loc = T
-		part1.master = null
-		part2.master = null
-		part1 = null
-		part2 = null
-		qdel(src)
-		return
-	add_fingerprint(user)
-	return
+/obj/item/assembly/shock_kit/Initialize(mapload)
+	. = ..()
+	if(!helmet_part)
+		helmet_part = new(src)
+		helmet_part.master = src
+	if(!electropack_part)
+		electropack_part = new(src)
+		electropack_part.master = src
+
+/obj/item/assembly/shock_kit/wrench_act(mob/living/user, obj/item/I)
+	..()
+	to_chat(user, span_notice("You disassemble [src]."))
+	if(helmet_part)
+		helmet_part.forceMove(drop_location())
+		helmet_part.master = null
+		helmet_part = null
+	if(electropack_part)
+		electropack_part.forceMove(drop_location())
+		electropack_part.master = null
+		electropack_part = null
+	qdel(src)
+	return TRUE
 
 /obj/item/assembly/shock_kit/attack_self(mob/user)
-	part1.attack_self(user)
-	part2.attack_self(user)
+	helmet_part.attack_self(user)
+	electropack_part.attack_self(user)
 	add_fingerprint(user)
-	return
-
-/obj/item/assembly/shock_kit/receive_signal()
-	if(istype(loc, /obj/structure/chair/e_chair))
-		var/obj/structure/chair/e_chair/C = loc
-		C.shock()
 	return

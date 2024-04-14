@@ -1,48 +1,50 @@
-/*
-	Basically just an empty shell for receiving and broadcasting radio messages. Not
-	very flexible, but it gets the job done.
-*/
-
+/**
+ * Basically just an empty shell for receiving and broadcasting radio messages. Not
+ * very flexible, but it gets the job done.
+ */
 /obj/machinery/telecomms/allinone
 	name = "telecommunications mainframe"
 	icon_state = "comm_server"
-	desc = "A compact machine used for portable subspace telecommuniations processing."
-	density = 1
-	anchored = 1
-	use_power = 0
+	desc = "A compact machine used for portable subspace telecommunications processing."
+	density = TRUE
+	use_power = NO_POWER_USE
 	idle_power_usage = 0
-	machinetype = 6
-	var/intercept = 0 // if nonzero, broadcasts all messages to syndicate channel
+	/// If this mainframe can process all syndicate chatter regardless of z level
+	var/syndicate = FALSE
 
-/obj/machinery/telecomms/allinone/receive_signal(datum/signal/signal)
+/obj/machinery/telecomms/allinone/nuclear
+	name = "advanced telecommunications mainframe"
+	desc = "A modified mainframe that allows for the processing of priority syndicate subspace telecommunications."
+	freq_listening = list(FREQ_SYNDICATE)
+	syndicate = TRUE
 
-	if(!on) // has to be on to receive messages
+/obj/machinery/telecomms/allinone/indestructible
+	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
+
+/obj/machinery/telecomms/allinone/indestructible/default_deconstruction_screwdriver(mob/user, icon_state_open, icon_state_closed, obj/item/screwdriver)
+	return NONE
+
+/obj/machinery/telecomms/allinone/indestructible/default_deconstruction_crowbar(obj/item/crowbar, ignore_panel, custom_deconstruct)
+	return NONE
+
+/obj/machinery/telecomms/allinone/receive_signal(datum/signal/subspace/signal)
+	if(!istype(signal) || signal.transmission_method != TRANSMISSION_SUBSPACE)  // receives on subspace only
+		return
+	if(!on || !is_freq_listening(signal))  // has to be on to receive messages
+		return
+	if(!syndicate && !(z in signal.levels) && !(0 in signal.levels))  // has to be syndicate or on the right level
 		return
 
-	if(is_freq_listening(signal)) // detect subspace signals
+	// Decompress the signal and mark it done
+	if(syndicate)
+		signal.levels = list(0)  // Signal is broadcast to agents anywhere
 
-		signal.data["done"] = 1 // mark the signal as being broadcasted
-		signal.data["compression"] = 0
+	signal.data["compression"] = 0
+	signal.mark_done()
+	if(signal.data["slow"] > 0)
+		sleep(signal.data["slow"]) // simulate the network lag if necessary
+	signal.broadcast()
 
-		// Search for the original signal and mark it as done as well
-		var/datum/signal/original = signal.data["original"]
-		if(original)
-			original.data["done"] = 1
-
-		if(signal.data["slow"] > 0)
-			sleep(signal.data["slow"]) // simulate the network lag if necessary
-
-		/* ###### Broadcast a message using signal.data ###### */
-		if(signal.frequency == GLOB.SYND_FREQ) // if syndicate broadcast, just
-			Broadcast_Message(signal.data["mob"],
-							  signal.data["vmask"],
-							  signal.data["radio"], signal.data["message"],
-							  signal.data["name"], signal.data["job"],
-							  signal.data["realname"],, signal.data["compression"], list(0, z), signal.frequency, signal.data["spans"],
-							  signal.data["verb_say"], signal.data["verb_ask"], signal.data["verb_exclaim"], signal.data["verb_yell"],
-							  signal.data["language"])
-
-/obj/machinery/telecomms/allinone/attackby(obj/item/P, mob/user, params)
-
-	if(istype(P, /obj/item/device/multitool))
-		attack_hand(user)
+/obj/machinery/telecomms/allinone/attackby(obj/item/attacking_item, mob/user, params)
+	if(attacking_item.tool_behaviour == TOOL_MULTITOOL)
+		return attack_hand(user)

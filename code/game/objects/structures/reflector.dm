@@ -1,135 +1,175 @@
 /obj/structure/reflector
-	name = "reflector frame"
-	icon = 'icons/obj/stock_parts.dmi'
-	icon_state = "box_0"
-	desc = "An angled mirror for reflecting lasers. This one does so at a 90 degree angle."
-	anchored = 0
-	density = 1
-	layer = BELOW_OBJ_LAYER
-	var/finished = 0
-	var/admin = 0 //Can't be rotated or deconstructed
-	var/framebuildstacktype = /obj/item/stack/sheet/metal
+	name = "reflector base"
+	icon = 'icons/obj/structures.dmi'
+	icon_state = "reflector_map"
+	desc = "A base for reflector assemblies."
+	anchored = FALSE
+	density = FALSE
+	var/deflector_icon_state
+	var/mutable_appearance/deflector_overlay
+	var/finished = FALSE
+	var/admin = FALSE //Can't be rotated or deconstructed
+	var/can_rotate = TRUE
+	var/framebuildstacktype = /obj/item/stack/sheet/iron
 	var/framebuildstackamount = 5
-	var/buildstacktype = /obj/item/stack/sheet/metal
+	var/buildstacktype = /obj/item/stack/sheet/iron
 	var/buildstackamount = 0
+	var/list/allowed_projectile_typecache = list(/obj/projectile/beam, /obj/projectile/energy/nuclear_particle)
+	var/rotation_angle = -1
 
-/obj/structure/reflector/bullet_act(obj/item/projectile/P)
-	var/turf/reflector_turf = get_turf(src)
-	var/turf/reflect_turf
-	var/new_dir = get_reflection(src.dir,P.dir)
-	if(!istype(P, /obj/item/projectile/beam))
-		return..()
-	if(new_dir)
-		reflect_turf = get_step(reflect_turf, new_dir)
+/obj/structure/reflector/Initialize(mapload)
+	. = ..()
+	icon_state = "reflector_base"
+	allowed_projectile_typecache = typecacheof(allowed_projectile_typecache)
+	if(deflector_icon_state)
+		deflector_overlay = mutable_appearance(icon, deflector_icon_state)
+		// We offset our physical position DOWN, because TRANSFORM IS A FUCK
+		deflector_overlay.pixel_y = -32
+		deflector_overlay.pixel_z = 32
+		add_overlay(deflector_overlay)
+
+	if(rotation_angle == -1)
+		set_angle(dir2angle(dir))
 	else
-		visible_message("<span class='notice'>[src] is hit by the [P]!</span>")
-		new_dir = 0
-		return ..() //Hits as normal, explodes or emps or whatever
+		set_angle(rotation_angle)
 
-	reflect_turf = get_step(loc,new_dir)
+	if(admin)
+		can_rotate = FALSE
 
-	P.original = reflect_turf
-	P.starting = reflector_turf
-	P.current = reflector_turf
-	P.yo = reflect_turf.y - reflector_turf.y
-	P.xo = reflect_turf.x - reflector_turf.x
-	P.range = initial(P.range) //Keep the projectile healthy as long as its bouncing off things
-	new_dir = 0
-	return - 1
+	AddComponent(/datum/component/usb_port, list(
+		/obj/item/circuit_component/reflector,
+	))
+
+/obj/structure/reflector/examine(mob/user)
+	. = ..()
+	if(finished)
+		. += "It is set to [rotation_angle] degrees, and the rotation is [can_rotate ? "unlocked" : "locked"]."
+		if(!admin)
+			if(can_rotate)
+				. += span_notice("Use your <b>hand</b> to adjust its direction.")
+				. += span_notice("Use a <b>screwdriver</b> to lock the rotation.")
+			else
+				. += span_notice("Use <b>screwdriver</b> to unlock the rotation.")
+
+/obj/structure/reflector/proc/set_angle(new_angle)
+	if(can_rotate)
+		rotation_angle = new_angle
+		if(deflector_overlay)
+			cut_overlay(deflector_overlay)
+			deflector_overlay.transform = turn(matrix(), new_angle)
+			add_overlay(deflector_overlay)
 
 
-/obj/structure/reflector/attackby(obj/item/weapon/W, mob/user, params)
+/obj/structure/reflector/setDir(new_dir)
+	return ..(NORTH)
+
+/obj/structure/reflector/bullet_act(obj/projectile/P)
+	var/pdir = P.dir
+	var/pangle = P.Angle
+	var/ploc = get_turf(P)
+	if(!finished || !allowed_projectile_typecache[P.type] || !(P.dir in GLOB.cardinals))
+		return ..()
+	if(auto_reflect(P, pdir, ploc, pangle) != BULLET_ACT_FORCE_PIERCE)
+		return ..()
+	return BULLET_ACT_FORCE_PIERCE
+
+/obj/structure/reflector/proc/auto_reflect(obj/projectile/P, pdir, turf/ploc, pangle)
+	P.ignore_source_check = TRUE
+	P.range = P.decayedRange
+	P.decayedRange = max(P.decayedRange--, 0)
+	return BULLET_ACT_FORCE_PIERCE
+
+/obj/structure/reflector/item_interaction(mob/living/user, obj/item/tool, list/modifiers, is_right_clicking)
+	if(admin && tool.tool_behaviour)
+		return ITEM_INTERACT_BLOCKING
+	return ..()
+
+/obj/structure/reflector/screwdriver_act(mob/living/user, obj/item/tool)
+	can_rotate = !can_rotate
+	to_chat(user, span_notice("You [can_rotate ? "unlock" : "lock"] [src]'s rotation."))
+	tool.play_tool_sound(src)
+	return ITEM_INTERACT_SUCCESS
+
+/obj/structure/reflector/wrench_act(mob/living/user, obj/item/tool)
+	if(anchored)
+		to_chat(user, span_warning("Unweld [src] from the floor first!"))
+		return ITEM_INTERACT_SUCCESS
+	user.visible_message(span_notice("[user] starts to dismantle [src]."), span_notice("You start to dismantle [src]..."))
+	if(!tool.use_tool(src, user, 8 SECONDS, volume=50))
+		return
+	to_chat(user, span_notice("You dismantle [src]."))
+	new framebuildstacktype(drop_location(), framebuildstackamount)
+	if(buildstackamount)
+		new buildstacktype(drop_location(), buildstackamount)
+	qdel(src)
+	return ITEM_INTERACT_SUCCESS
+
+/obj/structure/reflector/welder_act(mob/living/user, obj/item/tool)
+	if(!tool.tool_start_check(user, amount=1))
+		return
+	if(atom_integrity < max_integrity)
+		user.visible_message(span_notice("[user] starts to repair [src]."),
+							span_notice("You begin repairing [src]..."),
+							span_hear("You hear welding."))
+		if(tool.use_tool(src, user, 4 SECONDS, volume=40))
+			atom_integrity = max_integrity
+			user.visible_message(span_notice("[user] repairs [src]."), \
+								span_notice("You finish repairing [src]."))
+	else if(!anchored)
+		user.visible_message(span_notice("[user] starts to weld [src] to the floor."),
+							span_notice("You start to weld [src] to the floor..."),
+							span_hear("You hear welding."))
+		if (tool.use_tool(src, user, 2 SECONDS, volume=50))
+			set_anchored(TRUE)
+			to_chat(user, span_notice("You weld [src] to the floor."))
+	else
+		user.visible_message(span_notice("[user] starts to cut [src] free from the floor."),
+							span_notice("You start to cut [src] free from the floor..."),
+							span_hear("You hear welding."))
+		if (tool.use_tool(src, user, 2 SECONDS, volume=50))
+			set_anchored(FALSE)
+			to_chat(user, span_notice("You cut [src] free from the floor."))
+
+	return ITEM_INTERACT_SUCCESS
+
+/obj/structure/reflector/attackby(obj/item/W, mob/user, params)
 	if(admin)
 		return
-	if(istype(W, /obj/item/weapon/wrench))
-		if(anchored)
-			to_chat(user, "Unweld the [src] first!")
-		if(do_after(user, 80*W.toolspeed, target = src))
-			playsound(src.loc, W.usesound, 50, 1)
-			to_chat(user, "You dismantle the [src].")
-			new framebuildstacktype(loc, framebuildstackamount)
-			new buildstacktype(loc, buildstackamount)
-			qdel(src)
-	else if(istype(W, /obj/item/weapon/weldingtool))
-		var/obj/item/weapon/weldingtool/WT = W
-		switch(anchored)
-			if(0)
-				if (WT.remove_fuel(0,user))
-					playsound(src.loc, 'sound/items/Welder2.ogg', 50, 1)
-					user.visible_message("[user.name] starts to weld the [src.name] to the floor.", \
-						"<span class='notice'>You start to weld \the [src] to the floor...</span>", \
-						"<span class='italics'>You hear welding.</span>")
-					if (do_after(user,20*W.toolspeed, target = src))
-						if(!src || !WT.isOn())
-							return
-						anchored = 1
-						to_chat(user, "<span class='notice'>You weld \the [src] to the floor.</span>")
-			if(1)
-				if (WT.remove_fuel(0,user))
-					playsound(src.loc, 'sound/items/Welder2.ogg', 50, 1)
-					user.visible_message("[user.name] starts to cut the [src.name] free from the floor.", \
-						"<span class='notice'>You start to cut \the [src] free from the floor...</span>", \
-						"<span class='italics'>You hear welding.</span>")
-					if (do_after(user,20*W.toolspeed, target = src))
-						if(!src || !WT.isOn())
-							return
-						anchored  = 0
-						to_chat(user, "<span class='notice'>You cut \the [src] free from the floor.</span>")
 	//Finishing the frame
-	else if(istype(W,/obj/item/stack/sheet))
+	else if(istype(W, /obj/item/stack/sheet))
 		if(finished)
 			return
 		var/obj/item/stack/sheet/S = W
-		if(istype(W, /obj/item/stack/sheet/glass))
-			if(S.get_amount() < 5)
-				to_chat(user, "<span class='warning'>You need five sheets of glass to create a reflector!</span>")
-				return
-			else
-				S.use(5)
-				new /obj/structure/reflector/single (src.loc)
-				qdel (src)
-		if(istype(W,/obj/item/stack/sheet/rglass))
-			if(S.get_amount() < 10)
-				to_chat(user, "<span class='warning'>You need ten sheets of reinforced glass to create a double reflector!</span>")
-				return
-			else
-				S.use(10)
-				new /obj/structure/reflector/double (src.loc)
+		if(istype(S, /obj/item/stack/sheet/glass))
+			if(S.use(5))
+				new /obj/structure/reflector/single(drop_location())
 				qdel(src)
-		if(istype(W, /obj/item/stack/sheet/mineral/diamond))
-			if(S.get_amount() >= 1)
-				S.use(1)
-				new /obj/structure/reflector/box (src.loc)
+			else
+				to_chat(user, span_warning("You need five sheets of glass to create a reflector!"))
+				return
+		if(istype(S, /obj/item/stack/sheet/rglass))
+			if(S.use(10))
+				new /obj/structure/reflector/double(drop_location())
+				qdel(src)
+			else
+				to_chat(user, span_warning("You need ten sheets of reinforced glass to create a double reflector!"))
+				return
+		if(istype(S, /obj/item/stack/sheet/mineral/diamond))
+			if(S.use(1))
+				new /obj/structure/reflector/box(drop_location())
 				qdel(src)
 	else
 		return ..()
 
-/obj/structure/reflector/proc/get_reflection(srcdir,pdir)
-	return 0
-
-
-/obj/structure/reflector/verb/rotate()
-	set name = "Rotate"
-	set category = "Object"
-	set src in oview(1)
-
-	if(usr.stat || !usr.canmove || usr.restrained())
-		return
-	if (src.anchored)
-		to_chat(usr, "<span class='warning'>It is fastened to the floor!</span>")
-		return 0
-	src.setDir(turn(src.dir, 270))
-	return 1
-
-
-/obj/structure/reflector/AltClick(mob/user)
-	..()
-	if(!user.canUseTopic(src, be_close=TRUE))
-		to_chat(user, "<span class='warning'>You can't do that right now!</span>")
-		return
-	else
-		rotate()
-
+/obj/structure/reflector/proc/rotate(mob/user)
+	if (!can_rotate || admin)
+		to_chat(user, span_warning("The rotation is locked!"))
+		return FALSE
+	var/new_angle = tgui_input_number(user, "New angle for primary reflection face", "Reflector Angle", rotation_angle, 360)
+	if(isnull(new_angle) || QDELETED(user) || QDELETED(src) || !usr.can_perform_action(src, FORBID_TELEKINESIS_REACH))
+		return FALSE
+	set_angle(SIMPLIFY_DEGREES(new_angle))
+	return TRUE
 
 //TYPES OF REFLECTORS, SINGLE, DOUBLE, BOX
 
@@ -137,81 +177,163 @@
 
 /obj/structure/reflector/single
 	name = "reflector"
-	icon = 'icons/obj/structures.dmi'
-	icon_state = "reflector"
-	desc = "A double sided angled mirror for reflecting lasers. This one does so at a 90 degree angle."
-	finished = 1
-	var/static/list/rotations = list("[NORTH]" = list("[SOUTH]" = WEST, "[EAST]" = NORTH),
-"[EAST]" = list("[SOUTH]" = EAST, "[WEST]" = NORTH),
-"[SOUTH]" = list("[NORTH]" = EAST, "[WEST]" = SOUTH),
-"[WEST]" = list("[NORTH]" = WEST, "[EAST]" = SOUTH) )
+	deflector_icon_state = "reflector"
+	desc = "An angled mirror for reflecting laser beams."
+	density = TRUE
+	finished = TRUE
 	buildstacktype = /obj/item/stack/sheet/glass
 	buildstackamount = 5
 
-/obj/structure/reflector/single/get_reflection(srcdir,pdir)
-	var/new_dir = rotations["[srcdir]"]["[pdir]"]
-	return new_dir
+/obj/structure/reflector/single/anchored
+	anchored = TRUE
 
 /obj/structure/reflector/single/mapping
-	admin = 1
-	anchored = 1
+	admin = TRUE
+	anchored = TRUE
+
+/obj/structure/reflector/single/auto_reflect(obj/projectile/P, pdir, turf/ploc, pangle)
+	var/incidence = GET_ANGLE_OF_INCIDENCE(rotation_angle, (P.Angle + 180))
+	if(abs(incidence) > 90 && abs(incidence) < 270)
+		return FALSE
+	var/new_angle = SIMPLIFY_DEGREES(rotation_angle + incidence)
+	P.set_angle_centered(new_angle)
+	return ..()
 
 //DOUBLE
 
 /obj/structure/reflector/double
 	name = "double sided reflector"
-	icon = 'icons/obj/structures.dmi'
-	icon_state = "reflector_double"
-	desc = "A double sided angled mirror for reflecting lasers. This one does so at a 90 degree angle."
-	finished = 1
-	var/static/list/double_rotations = list("[NORTH]" = list("[NORTH]" = WEST, "[EAST]" = SOUTH, "[SOUTH]" = EAST, "[WEST]" = NORTH),
-"[EAST]" = list("[NORTH]" = EAST, "[WEST]" = SOUTH, "[SOUTH]" = WEST, "[EAST]" = NORTH),
-"[SOUTH]" = list("[NORTH]" = EAST, "[WEST]" = SOUTH, "[SOUTH]" = WEST, "[EAST]" = NORTH),
-"[WEST]" = list("[NORTH]" = WEST, "[EAST]" = SOUTH, "[SOUTH]" = EAST, "[WEST]" = NORTH) )
+	deflector_icon_state = "reflector_double"
+	desc = "A double sided angled mirror for reflecting laser beams."
+	density = TRUE
+	finished = TRUE
 	buildstacktype = /obj/item/stack/sheet/rglass
 	buildstackamount = 10
 
-/obj/structure/reflector/double/get_reflection(srcdir,pdir)
-	var/new_dir = double_rotations["[srcdir]"]["[pdir]"]
-	return new_dir
+/obj/structure/reflector/double/anchored
+	anchored = TRUE
 
 /obj/structure/reflector/double/mapping
-	admin = 1
-	anchored = 1
+	admin = TRUE
+	anchored = TRUE
+
+/obj/structure/reflector/double/auto_reflect(obj/projectile/P, pdir, turf/ploc, pangle)
+	var/incidence = GET_ANGLE_OF_INCIDENCE(rotation_angle, (P.Angle + 180))
+	var/new_angle = SIMPLIFY_DEGREES(rotation_angle + incidence)
+	P.set_angle_centered(new_angle)
+	return ..()
 
 //BOX
 
 /obj/structure/reflector/box
 	name = "reflector box"
-	icon = 'icons/obj/structures.dmi'
-	icon_state = "reflector_box"
-	desc = "A box with an internal set of mirrors that reflects all laser fire in a single direction."
-	finished = 1
-	var/static/list/box_rotations = list("[NORTH]" = list("[SOUTH]" = NORTH, "[EAST]" = NORTH, "[WEST]" = NORTH, "[NORTH]" = NORTH),
-"[EAST]" = list("[SOUTH]" = EAST, "[EAST]" = EAST, "[WEST]" = EAST, "[NORTH]" = EAST),
-"[SOUTH]" = list("[SOUTH]" = SOUTH, "[EAST]" = SOUTH, "[WEST]" = SOUTH, "[NORTH]" = SOUTH),
-"[WEST]" = list("[SOUTH]" = WEST, "[EAST]" = WEST, "[WEST]" = WEST, "[NORTH]" = WEST) )
+	deflector_icon_state = "reflector_box"
+	desc = "A box with an internal set of mirrors that reflects all laser beams in a single direction."
+	density = TRUE
+	finished = TRUE
 	buildstacktype = /obj/item/stack/sheet/mineral/diamond
 	buildstackamount = 1
 
-/obj/structure/reflector/box/get_reflection(srcdir,pdir)
-	var/new_dir = box_rotations["[srcdir]"]["[pdir]"]
-	return new_dir
-
+/obj/structure/reflector/box/anchored
+	anchored = TRUE
 
 /obj/structure/reflector/box/mapping
-	admin = 1
-	anchored = 1
+	admin = TRUE
+	anchored = TRUE
+
+/obj/structure/reflector/box/auto_reflect(obj/projectile/P)
+	P.set_angle_centered(rotation_angle)
+	return ..()
 
 /obj/structure/reflector/ex_act()
 	if(admin)
-		return
-	else
-		..()
-
+		return FALSE
+	return ..()
 
 /obj/structure/reflector/singularity_act()
 	if(admin)
 		return
 	else
-		..()
+		return ..()
+
+//	USB
+
+/obj/item/circuit_component/reflector
+	display_name = "Reflector"
+	desc = "Allows you to adjust the angle of a reflector."
+	circuit_flags = CIRCUIT_FLAG_INPUT_SIGNAL
+
+	///angle the reflector will be set to at trigger unless locked
+	var/datum/port/input/angle
+
+	var/obj/structure/reflector/attached_reflector
+
+/obj/item/circuit_component/reflector/populate_ports()
+	angle = add_input_port("Angle", PORT_TYPE_NUMBER)
+
+/obj/item/circuit_component/reflector/register_usb_parent(atom/movable/parent)
+	. = ..()
+	if(istype(parent, /obj/structure/reflector))
+		attached_reflector = parent
+
+/obj/item/circuit_component/reflector/unregister_usb_parent(atom/movable/parent)
+	attached_reflector = null
+	return ..()
+
+/obj/item/circuit_component/reflector/input_received(datum/port/input/port)
+	attached_reflector?.set_angle(angle.value)
+
+// tgui menu
+
+/obj/structure/reflector/ui_interact(mob/user, datum/tgui/ui)
+	if(!finished)
+		user.balloon_alert(user, "nothing to rotate!")
+		return
+	if(!can_rotate)
+		user.balloon_alert(user, "can't rotate!")
+		return
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "Reflector")
+		ui.open()
+
+/obj/structure/reflector/attack_robot(mob/user)
+	ui_interact(user)
+	return
+
+/obj/structure/reflector/ui_state(mob/user)
+	return GLOB.physical_state //Prevents borgs from adjusting this at range
+
+/obj/structure/reflector/ui_data(mob/user)
+	var/list/data = list()
+	data["rotation_angle"] = rotation_angle
+	data["reflector_name"] = name
+
+	return data
+
+/obj/structure/reflector/ui_act(action, params)
+	. = ..()
+	if(.)
+		return
+	switch(action)
+		if("rotate")
+			if (!can_rotate || admin)
+				return FALSE
+			var/new_angle = params["rotation_angle"]
+			if(!isnull(new_angle))
+				set_angle(SIMPLIFY_DEGREES(new_angle))
+			return TRUE
+		if("calculate")
+			if (!can_rotate || admin)
+				return FALSE
+			var/new_angle = rotation_angle + params["rotation_angle"]
+			if(!isnull(new_angle))
+				set_angle(SIMPLIFY_DEGREES(new_angle))
+			return TRUE
+
+/obj/structure/reflector/wrenched
+
+/obj/structure/reflector/wrenched/Initialize(mapload)
+	. = ..()
+
+	set_anchored(TRUE)

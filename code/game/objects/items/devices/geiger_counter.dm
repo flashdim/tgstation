@@ -1,158 +1,121 @@
-#define RAD_LEVEL_NORMAL 10
-#define RAD_LEVEL_MODERATE 30
-#define RAD_LEVEL_HIGH 75
-#define RAD_LEVEL_VERY_HIGH 125
-#define RAD_LEVEL_CRITICAL 200
-
-/obj/item/device/geiger_counter //DISCLAIMER: I know nothing about how real-life Geiger counters work. This will not be realistic. ~Xhuis
-	name = "geiger counter"
+/obj/item/geiger_counter //DISCLAIMER: I know nothing about how real-life Geiger counters work. This will not be realistic. ~Xhuis
+	name = "\improper Geiger counter"
 	desc = "A handheld device used for detecting and measuring radiation pulses."
+	icon = 'icons/obj/devices/scanner.dmi'
 	icon_state = "geiger_off"
-	item_state = "multitool"
+	inhand_icon_state = "multitool"
+	worn_icon_state = "geiger_counter"
+	lefthand_file = 'icons/mob/inhands/equipment/tools_lefthand.dmi'
+	righthand_file = 'icons/mob/inhands/equipment/tools_righthand.dmi'
 	w_class = WEIGHT_CLASS_SMALL
-	slot_flags = SLOT_BELT
-	materials = list(MAT_METAL = 150, MAT_GLASS = 150)
-	var/scanning = 0
-	var/radiation_count = 0
-	var/emagged = 0
+	slot_flags = ITEM_SLOT_BELT
+	item_flags = NOBLUDGEON
+	custom_materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 1.5, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 1.5)
 
-/obj/item/device/geiger_counter/New()
-	..()
-	START_PROCESSING(SSobj, src)
+	var/last_perceived_radiation_danger = null
 
-/obj/item/device/geiger_counter/Destroy()
-	STOP_PROCESSING(SSobj, src)
-	return ..()
+	var/scanning = FALSE
 
-/obj/item/device/geiger_counter/process()
-	if(emagged)
-		if(radiation_count < 20)
-			radiation_count++
-		return 0
-	if(radiation_count > 0)
-		radiation_count--
-		update_icon()
+/obj/item/geiger_counter/Initialize(mapload)
+	. = ..()
 
-/obj/item/device/geiger_counter/examine(mob/user)
-	..()
+	RegisterSignal(src, COMSIG_IN_RANGE_OF_IRRADIATION, PROC_REF(on_pre_potential_irradiation))
+
+/obj/item/geiger_counter/examine(mob/user)
+	. = ..()
 	if(!scanning)
-		return 1
-	to_chat(user, "<span class='info'>Alt-click it to clear stored radiation levels.</span>")
-	if(emagged)
-		to_chat(user, "<span class='warning'>The display seems to be incomprehensible.</span>")
-		return 1
-	switch(radiation_count)
-		if(-INFINITY to RAD_LEVEL_NORMAL)
-			to_chat(user, "<span class='notice'>Ambient radiation level count reports that all is well.</span>")
-		if(RAD_LEVEL_NORMAL + 1 to RAD_LEVEL_MODERATE)
-			to_chat(user, "<span class='disarm'>Ambient radiation levels slightly above average.</span>")
-		if(RAD_LEVEL_MODERATE + 1 to RAD_LEVEL_HIGH)
-			to_chat(user, "<span class='warning'>Ambient radiation levels above average.</span>")
-		if(RAD_LEVEL_HIGH + 1 to RAD_LEVEL_VERY_HIGH)
-			to_chat(user, "<span class='danger'>Ambient radiation levels highly above average.</span>")
-		if(RAD_LEVEL_VERY_HIGH + 1 to RAD_LEVEL_CRITICAL)
-			to_chat(user, "<span class='suicide'>Ambient radiation levels nearing critical level.</span>")
-		if(RAD_LEVEL_CRITICAL + 1 to INFINITY)
-			to_chat(user, "<span class='boldannounce'>Ambient radiation levels above critical level!</span>")
+		return
+	. += span_info("Alt-click it to clear stored radiation levels.")
+	switch(last_perceived_radiation_danger)
+		if(null)
+			. += span_notice("Ambient radiation level count reports that all is well.")
+		if(PERCEIVED_RADIATION_DANGER_LOW)
+			. += span_alert("Ambient radiation levels slightly above average.")
+		if(PERCEIVED_RADIATION_DANGER_MEDIUM)
+			. += span_warning("Ambient radiation levels above average.")
+		if(PERCEIVED_RADIATION_DANGER_HIGH)
+			. += span_danger("Ambient radiation levels highly above average.")
+		if(PERCEIVED_RADIATION_DANGER_EXTREME)
+			. += span_suicide("Ambient radiation levels reaching critical level!")
 
-/obj/item/device/geiger_counter/update_icon()
+/obj/item/geiger_counter/update_icon_state()
 	if(!scanning)
 		icon_state = "geiger_off"
-		return 1
-	if(emagged)
-		icon_state = "geiger_on_emag"
-		return 1
-	switch(radiation_count)
-		if(-INFINITY to RAD_LEVEL_NORMAL)
-			icon_state = "geiger_on_1"
-		if(RAD_LEVEL_NORMAL + 1 to RAD_LEVEL_MODERATE)
-			icon_state = "geiger_on_2"
-		if(RAD_LEVEL_MODERATE + 1 to RAD_LEVEL_HIGH)
-			icon_state = "geiger_on_3"
-		if(RAD_LEVEL_HIGH + 1 to RAD_LEVEL_VERY_HIGH)
-			icon_state = "geiger_on_4"
-		if(RAD_LEVEL_VERY_HIGH + 1 to RAD_LEVEL_CRITICAL)
-			icon_state = "geiger_on_4"
-		if(RAD_LEVEL_CRITICAL + 1 to INFINITY)
-			icon_state = "geiger_on_5"
-	..()
-
-/obj/item/device/geiger_counter/rad_act(amount)
-	if(!amount && scanning)
-		return 0
-	if(emagged)
-		amount = Clamp(amount, 0, 25) //Emagged geiger counters can only accept 25 radiation at a time
-	radiation_count += amount
-	if(isliving(loc))
-		var/mob/living/M = loc
-		if(!emagged)
-			to_chat(M, "<span class='boldannounce'>\icon[src] RADIATION PULSE DETECTED.</span>")
-			to_chat(M, "<span class='boldannounce'>\icon[src] Severity: [amount]</span>")
-		else
-			to_chat(M, "<span class='boldannounce'>\icon[src] !@%$AT!(N P!LS! D/TEC?ED.</span>")
-			to_chat(M, "<span class='boldannounce'>\icon[src] &!F2rity: <=[amount]#1</span>")
-	update_icon()
-
-/obj/item/device/geiger_counter/attack_self(mob/user)
-	scanning = !scanning
-	update_icon()
-	to_chat(user, "<span class='notice'>\icon[src] You switch [scanning ? "on" : "off"] [src].</span>")
-
-/obj/item/device/geiger_counter/attack(mob/living/M, mob/user)
-	if(user.a_intent == INTENT_HELP)
-		if(!emagged)
-			user.visible_message("<span class='notice'>[user] scans [M] with [src].</span>", "<span class='notice'>You scan [M]'s radiation levels with [src]...</span>")
-			if(!M.radiation)
-				to_chat(user, "<span class='notice'>\icon[src] Radiation levels within normal boundaries.</span>")
-				return 1
-			else
-				to_chat(user, "<span class='boldannounce'>\icon[src] Subject is irradiated. Radiation levels: [M.radiation].</span>")
-				return 1
-		else
-			user.visible_message("<span class='notice'>[user] scans [M] with [src].</span>", "<span class='danger'>You project [src]'s stored radiation into [M]'s body!</span>")
-			M.rad_act(radiation_count)
-			radiation_count = 0
-		return 1
-	..()
-
-/obj/item/device/geiger_counter/attackby(obj/item/I, mob/user, params)
-	if(istype(I, /obj/item/weapon/screwdriver) && emagged)
-		if(scanning)
-			to_chat(user, "<span class='warning'>Turn off [src] before you perform this action!</span>")
-			return 0
-		user.visible_message("<span class='notice'>[user] unscrews [src]'s maintenance panel and begins fiddling with its innards...</span>", "<span class='notice'>You begin resetting [src]...</span>")
-		playsound(user, I.usesound, 50, 1)
-		if(!do_after(user, 40*I.toolspeed, target = user))
-			return 0
-		user.visible_message("<span class='notice'>[user] refastens [src]'s maintenance panel!</span>", "<span class='notice'>You reset [src] to its factory settings!</span>")
-		playsound(user, 'sound/items/Screwdriver2.ogg', 50, 1)
-		emagged = 0
-		radiation_count = 0
-		update_icon()
-		return 1
-	else
 		return ..()
 
-/obj/item/device/geiger_counter/AltClick(mob/living/user)
-	if(!istype(user) || user.incapacitated())
+	switch(last_perceived_radiation_danger)
+		if(null)
+			icon_state = "geiger_on_1"
+		if(PERCEIVED_RADIATION_DANGER_LOW)
+			icon_state = "geiger_on_2"
+		if(PERCEIVED_RADIATION_DANGER_MEDIUM)
+			icon_state = "geiger_on_3"
+		if(PERCEIVED_RADIATION_DANGER_HIGH)
+			icon_state = "geiger_on_4"
+		if(PERCEIVED_RADIATION_DANGER_EXTREME)
+			icon_state = "geiger_on_5"
+	return ..()
+
+/obj/item/geiger_counter/attack_self(mob/user)
+	scanning = !scanning
+
+	if (scanning)
+		AddComponent(/datum/component/geiger_sound)
+	else
+		qdel(GetComponent(/datum/component/geiger_sound))
+
+	update_appearance(UPDATE_ICON)
+	balloon_alert(user, "switch [scanning ? "on" : "off"]")
+
+/obj/item/geiger_counter/afterattack(atom/target, mob/living/user, params)
+	. = ..()
+	. |= AFTERATTACK_PROCESSED_ITEM
+
+	if (user.combat_mode)
+		return
+
+	if (!CAN_IRRADIATE(target))
+		return
+
+	user.visible_message(span_notice("[user] scans [target] with [src]."), span_notice("You scan [target]'s radiation levels with [src]..."))
+	addtimer(CALLBACK(src, PROC_REF(scan), target, user), 20, TIMER_UNIQUE) // Let's not have spamming GetAllContents
+
+/obj/item/geiger_counter/equipped(mob/user, slot, initial)
+	. = ..()
+
+	RegisterSignal(user, COMSIG_IN_RANGE_OF_IRRADIATION, PROC_REF(on_pre_potential_irradiation))
+
+/obj/item/geiger_counter/dropped(mob/user, silent = FALSE)
+	. = ..()
+
+	UnregisterSignal(user, COMSIG_IN_RANGE_OF_IRRADIATION)
+
+/obj/item/geiger_counter/proc/on_pre_potential_irradiation(datum/source, datum/radiation_pulse_information/pulse_information, insulation_to_target)
+	SIGNAL_HANDLER
+
+	last_perceived_radiation_danger = get_perceived_radiation_danger(pulse_information, insulation_to_target)
+	addtimer(CALLBACK(src, PROC_REF(reset_perceived_danger)), TIME_WITHOUT_RADIATION_BEFORE_RESET, TIMER_UNIQUE | TIMER_OVERRIDE)
+
+	if (scanning)
+		update_appearance(UPDATE_ICON)
+
+/obj/item/geiger_counter/proc/reset_perceived_danger()
+	last_perceived_radiation_danger = null
+	if (scanning)
+		update_appearance(UPDATE_ICON)
+
+/obj/item/geiger_counter/proc/scan(atom/target, mob/user)
+	if (SEND_SIGNAL(target, COMSIG_GEIGER_COUNTER_SCAN, user, src) & COMSIG_GEIGER_COUNTER_SCAN_SUCCESSFUL)
+		return
+
+	to_chat(user, span_notice("[icon2html(src, user)] [isliving(target) ? "Subject" : "Target"] is free of radioactive contamination."))
+
+/obj/item/geiger_counter/AltClick(mob/living/user)
+	if(!istype(user) || !user.can_perform_action(src))
 		return ..()
 	if(!scanning)
-		to_chat(usr, "<span class='warning'>[src] must be on to reset its radiation level!</span>")
-		return 0
-	radiation_count = 0
-	to_chat(usr, "<span class='notice'>You flush [src]'s radiation counts, resetting it to normal.</span>")
-	update_icon()
-
-/obj/item/device/geiger_counter/emag_act(mob/user)
-	if(!emagged)
-		if(scanning)
-			to_chat(user, "<span class='warning'>Turn off [src] before you perform this action!</span>")
-			return 0
-		to_chat(user, "<span class='warning'>You override [src]'s radiation storing protocols. It will now generate small doses of radiation, and stored rads are now projected into creatures you scan.</span>")
-		emagged = 1
-
-#undef RAD_LEVEL_NORMAL
-#undef RAD_LEVEL_MODERATE
-#undef RAD_LEVEL_HIGH
-#undef RAD_LEVEL_VERY_HIGH
-#undef RAD_LEVEL_CRITICAL
+		to_chat(usr, span_warning("[src] must be on to reset its radiation level!"))
+		return
+	to_chat(usr, span_notice("You flush [src]'s radiation counts, resetting it to normal."))
+	last_perceived_radiation_danger = null
+	update_appearance(UPDATE_ICON)

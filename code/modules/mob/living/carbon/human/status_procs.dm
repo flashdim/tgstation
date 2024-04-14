@@ -1,22 +1,32 @@
 
-/mob/living/carbon/human/Stun(amount, updating = 1, ignore_canstun = 0)
-	amount = dna.species.spec_stun(src,amount)
+/mob/living/carbon/human/Stun(amount, ignore_canstun = FALSE)
+	amount = dna.species.spec_stun(src, amount)
 	return ..()
 
-/mob/living/carbon/human/Weaken(amount, updating = 1, ignore_canstun = 0)
-	amount = dna.species.spec_stun(src,amount)
+/mob/living/carbon/human/Knockdown(amount, ignore_canstun = FALSE)
+	amount = dna.species.spec_stun(src, amount) * physiology.knockdown_mod
 	return ..()
-	
-/mob/living/carbon/human/Paralyse(amount, updating = 1, ignore_canstun = 0)
-	amount = dna.species.spec_stun(src,amount)
-	return ..()
-	
-/mob/living/carbon/human/cure_husk()
-	. = ..()
-	if(.)
-		update_hair()
 
-/mob/living/carbon/human/become_husk()
+/mob/living/carbon/human/Paralyze(amount, ignore_canstun = FALSE)
+	amount = dna.species.spec_stun(src, amount)
+	return ..()
+
+/mob/living/carbon/human/Immobilize(amount, ignore_canstun = FALSE)
+	amount = dna.species.spec_stun(src, amount)
+	return ..()
+
+/mob/living/carbon/human/Unconscious(amount, ignore_canstun = FALSE)
+	amount = dna.species.spec_stun(src, amount)
+	if(HAS_TRAIT(src, TRAIT_HEAVY_SLEEPER))
+		amount *= (rand(125, 130) * 0.01)
+	return ..()
+
+/mob/living/carbon/human/Sleeping(amount)
+	if(HAS_TRAIT(src, TRAIT_HEAVY_SLEEPER))
+		amount *= (rand(125, 130) * 0.01)
+	return ..()
+
+/mob/living/carbon/human/cure_husk(list/sources)
 	. = ..()
 	if(.)
-		update_hair()
+		update_body_parts()

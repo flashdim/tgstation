@@ -5,72 +5,74 @@
 
 /obj/machinery/power/terminal
 	name = "terminal"
+	icon = 'icons/obj/pipes_n_cables/structures.dmi'
 	icon_state = "term"
-	desc = "It's an underfloor wiring terminal for power equipment."
-	level = 1
-	var/obj/machinery/power/master = null
-	anchored = 1
+	desc = "It's an underfloor wiring terminal, used to draw power from the grid."
 	layer = WIRE_TERMINAL_LAYER //a bit above wires
+	var/obj/machinery/power/master = null
 
 
-/obj/machinery/power/terminal/New()
-	..()
-	var/turf/T = src.loc
-	if(level==1) hide(T.intact)
-	return
+/obj/machinery/power/terminal/Initialize(mapload)
+	. = ..()
+
+	AddElement(/datum/element/undertile, TRAIT_T_RAY_VISIBLE, use_alpha = TRUE)
 
 /obj/machinery/power/terminal/Destroy()
 	if(master)
 		master.disconnect_terminal()
+		master = null
 	return ..()
 
-/obj/machinery/power/terminal/hide(i)
-	if(i)
-		invisibility = INVISIBILITY_MAXIMUM
-		icon_state = "term-f"
+/obj/machinery/power/terminal/examine(mob/user)
+	. = ..()
+	if(!QDELETED(powernet))
+		. += span_notice("It's operating on the [LOWER_TEXT(GLOB.cable_layer_to_name["[cable_layer]"])].")
 	else
-		invisibility = 0
-		icon_state = "term"
+		. += span_warning("It's disconnected from the [LOWER_TEXT(GLOB.cable_layer_to_name["[cable_layer]"])].")
 
+/obj/machinery/power/terminal/should_have_node()
+	return TRUE
 
 /obj/machinery/power/proc/can_terminal_dismantle()
-	. = 0
+	. = FALSE
 
 /obj/machinery/power/apc/can_terminal_dismantle()
-	. = 0
+	. = FALSE
 	if(opened)
-		. = 1
+		. = TRUE
 
 /obj/machinery/power/smes/can_terminal_dismantle()
-	. = 0
+	. = FALSE
 	if(panel_open)
-		. = 1
+		. = TRUE
 
-
-/obj/machinery/power/terminal/proc/dismantle(mob/living/user, obj/item/W)
+/obj/machinery/power/terminal/proc/dismantle(mob/living/user, obj/item/I)
 	if(isturf(loc))
 		var/turf/T = loc
-		if(T.intact)
-			to_chat(user, "<span class='warning'>You must first expose the power terminal!</span>")
+		if(T.underfloor_accessibility < UNDERFLOOR_INTERACTABLE)
+			balloon_alert(user, "must expose the cable terminal!")
 			return
 
-		if(!master || master.can_terminal_dismantle())
-			user.visible_message("[user.name] dismantles the power terminal from [master].", \
-								"<span class='notice'>You begin to cut the cables...</span>")
+	if(master && !master.can_terminal_dismantle())
+		return
 
-			playsound(src.loc, 'sound/items/Deconstruct.ogg', 50, 1)
-			if(do_after(user, 50*W.toolspeed, target = src))
-				if(!master || master.can_terminal_dismantle())
-					if(prob(50) && electrocute_mob(user, powernet, src, 1, TRUE))
-						do_sparks(5, TRUE, master)
-						return
-					new /obj/item/stack/cable_coil(loc, 10)
-					to_chat(user, "<span class='notice'>You cut the cables and dismantle the power terminal.</span>")
-					qdel(src)
+	user.visible_message(span_notice("[user.name] dismantles the cable terminal from [master]."))
+	balloon_alert(user, "cutting the cables...")
 
+	playsound(src.loc, 'sound/items/deconstruct.ogg', 50, TRUE)
+	if(I.use_tool(src, user, 50))
+		if(master && !master.can_terminal_dismantle())
+			return
 
-/obj/machinery/power/terminal/attackby(obj/item/W, mob/living/user, params)
-	if(istype(W, /obj/item/weapon/wirecutters))
-		dismantle(user, W)
-	else
-		return ..()
+		if(prob(50) && electrocute_mob(user, powernet, src, 1, TRUE))
+			do_sparks(5, TRUE, master)
+			return
+
+		var/obj/item/stack/cable_coil/cable = new (drop_location(), 10)
+		qdel(src)
+		cable.balloon_alert(user, "cable terminal dismantled")
+
+/obj/machinery/power/terminal/wirecutter_act(mob/living/user, obj/item/I)
+	..()
+	dismantle(user, I)
+	return TRUE

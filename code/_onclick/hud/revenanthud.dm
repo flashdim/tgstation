@@ -1,10 +1,14 @@
+/datum/hud/revenant
+	ui_style = 'icons/hud/screen_gen.dmi'
 
 /datum/hud/revenant/New(mob/owner)
 	..()
 
-	healths = new /obj/screen/healths/revenant()
-	infodisplay += healths
+	pull_icon = new /atom/movable/screen/pull(null, src)
+	pull_icon.icon = ui_style
+	pull_icon.update_appearance()
+	pull_icon.screen_loc = ui_living_pull
+	static_inventory += pull_icon
 
-/mob/living/simple_animal/revenant/create_mob_hud()
-	if(client && !hud_used)
-		hud_used = new /datum/hud/revenant(src)
+	healths = new /atom/movable/screen/healths/revenant(null, src)
+	infodisplay += healths

@@ -1,320 +1,203 @@
-#CONTRIBUTING
+# CONTRIBUTING
+
+1. [Reporting Issues](#reporting-issues)
+2. [Introduction](#introduction)
+3. [Getting Started](#getting-started)
+4. [Meet the Team](#meet-the-team)
+	1. [Headcoder](#headcoder)
+	2. [Maintainers](#maintainers)
+	3. [Issue Managers](#issue-managers)
+5. [Development Guides](#development-guides)
+6. [Pull Request Process](#pull-request-process)
+7. [Good Boy Points](#good-boy-points)
+8. [Porting features/sprites/sounds/tools from other codebases](#porting-featuresspritessoundstools-from-other-codebases)
+9. [Banned content](#banned-content)
+10. [A word on Git](#a-word-on-git)
 
 ## Reporting Issues
 
-See [this page](http://tgstation13.org/wiki/Reporting_Issues) for a guide and format to issue reports.
+If you ever encounter a bug in-game, the best way to let a coder know about it is with our GitHub Issue Tracker. Please make sure you use the supplied issue template, and include the round ID for the server.
+
+(If you don't have an account, making a new one takes only one minute.)
+
+If you have difficulty, ask for help in the #coding-general channel on our discord.
 
 ## Introduction
 
-Hello and welcome to /tg/station's contributing page. You are here because you are curious or interested in contributing. Thanks for being interested. Everyone is free to contribute to this project as long as they follow the simple guidelines and specifications below, because at /tg/station, we have a goal to increase code maintainability and to do that we are going to need all pull requests to hold up to those specifications. This is in order for all of us to benefit, instead of having to fix the same bug more than once because of duplicated code.
+Hello and welcome to /tg/station's contributing page. You are here because you are curious or interested in contributing - thank you! Everyone is free to contribute to this project as long as they follow the simple guidelines and specifications below; at /tg/station, we strive to maintain code stability and maintainability, and to do that, we need all pull requests to hold up to those specifications. It's in everyone's best interests - including yours! - if the same bug doesn't have to be fixed twice because of duplicated code.
 
-But first we want to make it clear how you can contribute, if contributing is a new experience for you, and what powers the team has over your pull request so you do not get any surprises when submitting pull requests, and it is closed for a reason you did not anticipate.
+First things first, we want to make it clear how you can contribute (if you've never contributed before), as well as the kinds of powers the team has over your additions, to avoid any unpleasant surprises if your pull request is closed for a reason you didn't foresee.
 
 ## Getting Started
-At /tg/station we do not have a list of goals and features to add, we instead allow freedom for contributors to suggest and create their ideas for the game. That does not mean we aren't determined to squash bugs, which unfortunately pop up a lot due to the deep complexity of the game. Here are some useful getting started guides, if you want to contribute or if you want to know what challenges you can tackle with zero knowledge about the game's code structure.
 
-If you want to contribute the first thing you'll need to do is [set up Git](http://tgstation13.org/wiki/Setting_up_git) so you can download the source code.
+/tg/station doesn't have a list of goals and features to add; we instead allow freedom for contributors to suggest and create their ideas for the game. That doesn't mean we aren't determined to squash bugs, which unfortunately pop up a lot due to the deep complexity of the game. Here are some useful starting guides, if you want to contribute or if you want to know what challenges you can tackle with zero knowledge about the game's code structure.
 
-We have a [list of guides on the wiki](http://www.tgstation13.org/wiki/index.php/Guides#Development_and_Contribution_Guides) which will help you get started contributing to /tg/station with git and Dream Maker. For beginners, it is recommended you work on small projects, at first. If you need help learning to program in BYOND check out this [repository of resources](http://www.byond.com/developer/articles/resources).
+If you want to contribute the first thing you'll need to do is [set up Git](https://hackmd.io/@tgstation/HJ8OdjNBc) so you can download the source code.
+After setting it up, optionally navigate your git commandline to the project folder and run the command: `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 
-There is an open list of approachable issues for [your inspiration here](https://github.com/tgstation/-tg-station/issues?q=is%3Aopen+is%3Aissue+label%3A%22Easy+Task%22).
+We have a [list of guides on the wiki](http://www.tgstation13.org/wiki/Guides#Development_and_Contribution_Guides) that will help you get started contributing to /tg/station with Git and Dream Maker. For beginners, it is recommended you work on small projects like bugfixes at first. If you need help learning to program in BYOND, check out this [repository of resources](http://www.byond.com/developer/articles/resources).
 
-You can of course, as always, ask for help at [#coderbus](irc://irc.rizon.net/coderbus) on irc.rizon.net. We are just here to have fun and help so do not expect professional support please.
+There is an open list of approachable issues for [your inspiration here](https://github.com/tgstation/tgstation/issues?q=is%3Aopen+is%3Aissue+label%3A%22Good+First+Issue%22).
+
+You can of course, as always, ask for help on the Discord channels or the forums. We're just here to have fun and help out, so please don't expect professional support.
 
 ## Meet the Team
 
-**Project Leads**
+### Headcoder
 
-Project Leads, which are elected by the maintainers and members of the project, have complete control over what goes through and what is reverted. They are encouraged to take control in what features are added to the game. Project Leads can also act as Project Managers when needed.
+The Headcoder is responsible for controlling, adding, and removing maintainers from the project. In addition to filling the role of a normal maintainer, they have sole authority on who becomes a maintainer, as well as who remains a maintainer and who does not.
 
-**Project Managers**
+### Maintainers
 
-Project Managers are responsible for recruiting and firing maintainers, enforcing coding standards, and reverting changes that should have not been committed. Project Managers are assigned by Project Leads. On things that Project Managers disagree on they are to refer to the Project Leads for advice. It is encouraged that if you do not want to waste time working on a feature, that might be denied, that you ask a Project Manager first.
-
-**Maintainers**
-
-Maintainers are quality control. If a proposed pull request does not meet the mentioned quality specifications then it can be closed if you fail to satisfy them. Maintainers are required to give a reason for closing the pull request.
+Maintainers are quality control. If a proposed pull request doesn't meet the following specifications, they can request you to change it, or simply just close the pull request. Maintainers are required to give a reason for closing the pull request.
 
 Maintainers can revert your changes if they feel they are not worth maintaining or if they did not live up to the quality specifications.
 
-## Specification
+<details>
+<summary>Maintainer Guidelines</summary>
 
-As mentioned before, you are expected to follow these specifications in order to make everyone's lives easier, it will also save you and us time, with having to make the changes and us having to tell you what to change. Thank you for reading this section.
+These are the few directives we have for project maintainers.
 
-### Object Oriented code
-As BYOND's Dream Maker is an object oriented language, code must be object oriented when possible in order to be more flexible when adding content to it. If you are unfamiliar with this concept, it is highly recommended you look it up.
+- Do not merge PRs you create.
+- Do not merge PRs until 24 hours have passed since it was opened. Exceptions include:
+  - Emergency fixes.
+    - Try to get secondary maintainer approval before merging if you are able to.
+  - PRs with empty commits intended to generate a changelog.
+- Do not merge PRs that contain content from the [banned content list](./CONTRIBUTING.md#banned-content).
+- Do not close PRs purely for breaking a template if the same information is contained without it.
 
-### All Byond paths must contain the full path.
-(ie: absolute pathing)
+These are not steadfast rules as maintainers are expected to use their best judgement when operating.
 
-Byond will allow you nest almost any type keyword into a block, such as:
+</details>
 
-```c++
-datum
-	datum1
-		var
-			varname1 = 1
-			varname2
-			static
-				varname3
-				varname4
-		proc
-			proc1()
-				code
-			proc2()
-				code
+### Issue Managers
 
-		datum2
-			varname1 = 0
-			proc
-				proc3()
-					code
-			proc2()
-				..()
-				code
-```
+Issue Managers help out the project by labelling bug reports and PRs and closing bug reports which are duplicates or are no longer applicable.
 
-The use of this is not allowed in this project as it makes finding definitions via full text searching next to impossible. The only exception is the variables of an object may be nested to the object, but must not nest further.
+<details>
+<summary>What You Can and Can't Do as an Issue Manager</summary>
 
-The previous code made compliant:
+This should help you understand what you can and can't do with your newfound github permissions.
 
-```c++
-/datum/datum1
-		var/varname1
-		var/varname2
-		var/static/varname3
-		var/static/varname4
+Things you **CAN** do:
+* Label issues appropriately
+* Close issues when appropriate
+* Label PRs, unless you are goofball.
 
-/datum/datum1/proc/proc1()
-	code
-/datum/datum1/proc/proc2()
-	code
-/datum/datum1/datum2
-	varname1 = 0
-/datum/datum1/datum2/proc/proc3()
-	code
-/datum/datum1/datum2/proc2()
-	..()
-	code
-```
+Things you **CAN'T** do:
+* [Close PRs](https://imgur.com/w2RqpX8.png): Only maintainers are allowed to close PRs. Do not hit that button.
+* Close issues purely for breaking a template if the same information is contained without it.
 
-### No overriding type safety checks.
-The use of the : operator to override type safety checks is not allowed. You must cast the variable to the proper type.
+For more information reference the [Issue Manager Guide](.github/guides/ISSUE_MANAGER.md).
 
-### Type paths must began with a /
-eg: `/datum/thing` not `datum/thing`
+</details>
 
-### Datum type paths must began with "datum"
-In byond this is optional, but omitting it makes finding definitions harder.
+---
 
-### Do not use text/string based type paths
-It is rarely allowed to put type paths in a text format, as there are no compile errors if the type path no longer exists. Here is an example:
+Our team is entirely voluntary, as such we extend our thanks to maintainers, issue managers, and contributors alike for helping keep the project alive.
 
-```C++
-//Good
-var/path_type = /obj/item/weapon/baseball_bat
+## Development Guides
 
-//Bad
-var/path_type = "/obj/item/weapon/baseball_bat"
-```
+#### Writing readable code 
+[Style guide](./guides/STYLE.md)
 
-### Tabs not spaces
-You must use tabs to indent your code, NOT SPACES.
+#### Writing sane code 
+[Code standards](./guides/STANDARDS.md)
 
-(You may use spaces to align something, but you should tab to the block level first, then add the remaining spaces)
+#### Writing understandable code 
+[Autodocumenting code](./guides/AUTODOC.md)
 
-### No Hacky code
-Hacky code, such as adding specific checks, is highly discouraged and only allowed when there is ***no*** other option. (Protip: 'I couldn't immediately think of a proper way so thus there must be no other option' is not gonna cut it here )
+#### Misc
 
-You can avoid hacky code by using object oriented methodologies, such as overriding a function (called procs in DM) or sectioning code into functions and then overriding them as required.
-
-### No duplicated code.
-Copying code from one place to another maybe suitable for small short time projects but /tg/station focuses on the long term and thus discourages this.
-
-Instead you can use object orientation, or simply placing repeated code in a function, to obey this specification easily.
-
-### Startup/Runtime tradeoffs with lists and the "hidden" init proc
-First, read the comments in this byond thread, starting here:http://www.byond.com/forum/?post=2086980&page=2#comment19776775
-
-There are two key points here:
-
-1) Defining a list in the type definition incurs a hidden proc call - init, if you must define a list at startup, do so in New()/Initialize and avoid the overhead of a second call (init() and then new())
-
-2)Offsets list creation overhead to the point where the list is actually required (which for many objects, may be never at all). 
-
-Remember, this tradeoff makes sense in many cases but not all, you should think carefully about your implementation before deciding if this is an appropriate thing to do
-
-### Prefer `Initialize` over `New` for atoms
-Our game controller is pretty good at handling long operations and lag. But, it can't control what happens when the map is loaded, which calls `New` for all atoms on the map. If you're creating a new atom, use the `Initialize` proc to do what you would normally do in `New`. This cuts down on the number of proc calls needed when the world is loaded. See here for details on `Initialize`: https://github.com/tgstation/tgstation/blob/master/code/game/atoms.dm#L49
-While we normally encourage (and in some cases, even require) bringing out of date code up to date when you make unrelated changes near the out of date code, that is not the case for `New` -> `Initialize` conversions. These systems are generally more dependant on parent and children procs so unrelated random conversions of existing things can cause bugs that take months to figure out.
-
-### No magic numbers or strings
-Make these #defines with a name that more clearly states what it's for.
-
-### Control statements:
-(if,while,for,etc)
-
-* All control statements must not contain code on the same line as the statement (`if (blah) return`)
-* All control statements comparing a variable to a number should use the formula of `thing` `operator` `number`, not the reverse (eg: `if (count <= 10)` not `if (10 >= count)`)
-
-### Use early return.
-Do not enclose a proc in an if block when returning on a condition is more feasible
-This is bad:
-````
-/datum/datum1/proc/proc1()
-	if (thing1)
-		if (!thing2)
-			if (thing3 == 30)
-				do stuff
-````
-This is good:
-````
-/datum/datum1/proc/proc1()
-	if (!thing1)
-		return
-	if (thing2)
-		return
-	if (thing3 != 30)
-		return
-	do stuff
-````
-This prevents nesting levels from getting deeper then they need to be.
-
-### Develop Secure Code
-
-* Player input must always be escaped safely, we recommend you use stripped_input in all cases where you would use input. Essentially, just always treat input from players as inherently malicious and design with that use case in mind
-
-* Calls to the database must be escaped properly - use sanitizeSQL to escape text based database entries from players or admins, and isnum() for number based database entries from players or admins.
-
-* All calls to topics must be checked for correctness, topic href calls can be easily faked by clients, so you should ensure that the call is valid for the state the item is in. Do not rely on the UI code to provide only valid topic calls
-
-* Information that players could use to metagame (that is to identify the round type and or the antags via information that would not be available to them in character) should be kept as administrator only
-
-* It is recommended as well you do not expose information about the players - even something as simple as the number of people who have readied up at the start of the round can and has been used to try to identify the round type
-
-* Where you have code that can cause large scale modification and *FUN* make sure you start it out locked behind one of the default admin roles - use common sense to determine which role fits the level of damage a function could do
-
-### Files
-* Because runtime errors do not give the full path, try to avoid having files with the same name across folders.
-
-* File names should not be mixed case, or contain spaces or any character that would require escaping in a uri.
-
-* Files and path accessed and referenced by code above simply being #included should be strictly lowercase to avoid issues on filesystems where case matters.
-
-### Other Notes
-* Code should be modular where possible, if you are working on a new class then it is best if you put it in a new file.
-
-* Bloated code may be necessary to add a certain feature, which means there has to be a judgement over whether the feature is worth having or not. You can help make this decision easier by making sure your code is modular.
-
-* You are expected to help maintain the code that you add, meaning if there is a problem then you are likely to be approached in order to fix any issues, runtimes or bugs.
-
-* Do not divide when you can easily convert it to a multiplication. (ie `4/2` should be done as `4*0.5`)
-
-#### Enforced not enforced
-The following different coding styles are not only not enforced, but it is generally frowned upon to change them over from one to the other for little reason:
-
-* English/British spelling on var/proc names
-	* Color/Colour nobody cares,
-* Spaces after control statements
-	* if() if () nobody cares.
-
-#### Operators and spaces:
-(this is not strictly enforced, but more a guideline for readability's sake)
-
-* Operators that should be separated by spaces
-	* Boolean and logic operators like &&, || <, >, ==, etc (but not !)
-	* Argument separator operators like , (and ; when used in a forloop)
-	* Assignment operators like = or += or the like
-* Operators that should not be separated by spaces
-	* Bitwise operators like & or |
-	* Access operators like . and :
-	* Parentheses ()
-	* logical not !
-
-Math operators like +, -, /, *, etc are up in the air, just choose which version looks more readable.
-
-### Dream Maker Quirks/Tricks:
-Like all languages, Dream Maker has its quirks, some of them are beneficial to us, like these
-
-* In-To for loops: ```for(var/i = 1, i <= some_value, i++)``` is a fairly standard way to write an incremental for loop in most languages (especially those in the C family) however DM's ```for(var/i in 1 to some_value)``` syntax is oddly faster than its implementation of the former syntax; where possible it's advised to use DM's syntax. (Note, the ```to``` keyword is inclusive, so it automatically defaults to replacing ```<=```, if you want ```<``` then you should write it as ```1 to some_value-1```).
-HOWEVER, if either ```some_value``` or ```i``` changes within the body of the for (underneath the ```for(...)``` header) or if you are looping over a list AND changing the length of the list then you can NOT use this type of for loop!
-
-
-* Istypeless for loops: a name for a differing syntax for writing for-each style loops in DM, however it is NOT DM's standard syntax hence why this is considered a quirk. Take a look at this:
-```
-var/list/bag_of_items = list(sword, apple, coinpouch, sword, sword)
-var/obj/item/sword/best_sword = null
-for(var/obj/item/sword/S in bag_of_items)
-	if(!best_sword || S.damage > best_sword.damage)
-    		best_sword = S
-```
-The above is a simple proc for checking all swords in a container and returning the one with the highest damage, it uses DM's standard syntax for a for loop, it does this by specifying a type in the variable of the for header which byond interprets as a type to filter by, it performs this filter using ```istype()``` (or some internal-magic similar to ```istype()```, I wouldn't put it past byond), the above example is fine with the data currently contained in ```bag_of_items```, however if ```bag_of_items``` contained ONLY swords, or only SUBTYPES of swords, then the above is inefficient, for example:
-```
-var/list/bag_of_swords = list(sword, sword, sword, sword)
-var/obj/item/sword/best_sword = null
-for(var/obj/item/sword/S in bag_of_swords)
-	if(!best_sword || S.damage > best_sword.damage)
-    		best_sword = S
-```
-specifies a type for DM to filter by, with the previous example that's perfectly fine, we only want swords, but here the bag only contains swords? is DM still going to try to filter because we gave it a type to filter by? YES, and here comes the inefficiency. Whereever a list (or other container, such as an atom (in which case you're technically accessing their special contents list but I digress)) contains datums of the same datatype or subtypes of the datatype you require for your for body
-you can circumvent DM's filtering and automatic ```istype()``` checks by writing the loop as such:
-```
-var/list/bag_of_swords = list(sword, sword, sword, sword)
-var/obj/item/sword/best_sword = null
-for(var/s in bag_of_swords)
-	var/obj/item/sword/S = s
-	if(!best_sword || S.damage > best_sword.damage)
-    		best_sword = S
-```
-Of course, if the list contains data of a mixed type then the above optimisation is DANGEROUS, as it will blindly typecast all data in the list as the specified type, even if it isn't really that type! which will cause runtime errors.
-
-* Dot variable: like other languages in the C family, Dream maker has a ```.``` or "Dot" operator, used for accessing variables/members/functions of an object instance.
-eg:
-```
-var/mob/living/carbon/human/H = YOU_THE_READER
-H.gib()
-```
-however DM also has a dot variable, accessed just as ```.``` on it's own, defaulting to a value of null, now what's special about the dot operator is that it is automatically returned (as in the ```return``` statment) at the end of a proc, provided the proc does not already manually return (```return count``` for example). Why is this special? well the ```return``` statement should ideally be free from overhead (functionally free, of course nothing's free) but DM fails to fulfill this,  DM's return statement is actually fairly costly for what it does and for what it's used for.
-With ```.``` being everpresent in every proc can we use it as a temporary variable? Of course we can! However the ```.``` operator cannot replace a typecasted variable, it can hold data any other var in DM can, it just can't be accessed as one, however the ```.``` operator is compatible with a few operators that look weird but work perfectly fine, such as: ```.++``` for incrementing ```.'s``` value, or ```.[1]``` for accessing the first element of ```.``` (provided it's a list).
-
-## Globals versus Static
-
-Byond has a var keyword, called global. This var keyword is for vars inside of types. IE:
-
-```
-mob
-    var
-        global
-            thing = 1
-```
-It DOES NOT mean that you can access it everywhere like a global var, instead It means that that var will only exist once for all instances of its type, in this case that var will only exist once for all mobs, ie its shared across everything in it's type. (much more like the keyword static in other languages like php/c++/c#/java)
-
-Isn't that confusing? 
-
-There is also an undocumented keyword static, that has the same behaviour as global but more correctly describes byond's behaviour. Therefore we always use static instead of global where we need it as it reduces suprise when reading byond code.
+- [AI Datums](../code/datums/ai/learn_ai.md)
+- [Embedding TGUI Components in Chat](../tgui/docs/chat-embedded-components.md)
+- [Hard Deletes](./guides/HARDDELETES.md)
+- [MC Tab Guide](./guides/MC_tab.md)
+- [Policy Configuration System](./guides/POLICYCONFIG.md)
+- [Quickly setting up a development database with ezdb](./guides/EZDB.md)
+- [Required Tests (Continuous Integration)](./guides/CI.md)
+- [Splitting up pull requests, aka atomization](./guides/ATOMIZATION.md)
+- [UI Development](../tgui/README.md)
+- [Visual Effects and Systems](./guides/VISUALS.md)
 
 ## Pull Request Process
 
-There is no strict process when it comes to merging pull requests, pull requests will sometimes take a while before they are looked at by a maintainer, the bigger the change the more time it will take before they are accepted into the code. Every team member is a volunteer who is giving up their own time to help maintain and contribute, so please be nice. Here are some helpful ways to make it easier for you and for the maintainer when making a pull request.
+There is no strict process when it comes to merging pull requests. Pull requests will sometimes take a while before they are looked at by a maintainer; the bigger the change, the more time it will take before they are accepted into the code. Every team member is a volunteer who is giving up their own time to help maintain and contribute, so please be courteous and respectful. Here are some helpful ways to make it easier for you and for the maintainers when making a pull request.
 
-* Make sure your pull request complies to the requirements outlined in [this guide](http://tgstation13.org/wiki/Getting_Your_Pull_Accepted)
+* Make sure your pull request complies to the requirements outlined here
 
-* You are going to be expected to document all your changes in the pull request, failing to do so will mean delaying it as we will have to question why you made the change. On the other hand you can speed up the process by making the pull request readable and easy to understand, with diagrams or before/after data.
+* You are expected to have tested your pull requests if it is anything that would warrant testing. Text only changes, single number balance changes, and similar generally don't need testing, but anything else does. This means by extension web edits are disallowed for larger changes.
 
-* We ask that you use the changelog system to document your change, this prevents our players from being caught unaware by changes - you can find more information about this here http://tgstation13.org/wiki/Guide_to_Changelogs
+* You are going to be expected to document all your changes in the pull request. Failing to do so will mean delaying it as we will have to question why you made the change. On the other hand, you can speed up the process by making the pull request readable and easy to understand, with diagrams or before/after data. Should you be optimizing a routine you must provide proof by way of profiling that your changes are faster.
+
+* We ask that you use the changelog system to document your player facing changes, which prevents our players from being caught unaware by said changes - you can find more information about this [on this wiki page](http://tgstation13.org/wiki/Guide_to_Changelogs).
 
 * If you are proposing multiple changes, which change many different aspects of the code, you are expected to section them off into different pull requests in order to make it easier to review them and to deny/accept the changes that are deemed acceptable.
 
-* If your pull request is accepted, the code you add no longer belongs exclusively to you but to everyone; everyone is free to work on it, but you are also free to object to any changes being made, which will be noted by a Project Lead or Project Manager. It is a shame this has to be explicitly said, but there have been cases where this would've saved some trouble.
+* If your pull request is accepted, the code you add no longer belongs exclusively to you but to everyone; everyone is free to work on it, but you are also free to support or object to any changes being made, which will likely hold more weight, as you're the one who added the feature. It is a shame this has to be explicitly said, but there have been cases where this would've saved some trouble.
 
-* Please explain why you are submitting the pull request, and how you think your change will be beneficial to the game. Failure to do so will be grounds for rejecting the PR.
+* If your pull request is not finished, you may open it as a draft for potential review. If you open it as a full-fledged PR make sure it is at least testable in a live environment. Pull requests that do not at least meet this requirement will be closed. You may request a maintainer reopen the pull request when you're ready, or make a new one.
+
+* While we have no issue helping contributors (and especially new contributors) bring reasonably sized contributions up to standards via the pull request review process, larger contributions are expected to pass a higher bar of completeness and code quality *before* you open a pull request. Maintainers may close such pull requests that are deemed to be substantially flawed. You should take some time to discuss with maintainers or other contributors on how to improve the changes.
+
+* After leaving reviews on an open pull request, maintainers may convert it to a draft. Once you have addressed all their comments to the best of your ability, feel free to mark the pull as `Ready for Review` again.
+
+## Justifying Your Changes
+
+You must explain why you are submitting the pull request in the "Why It's Good For The Game" section of your pull request, and how you think your change will be beneficial to the game. Failure to do so will be grounds for rejecting your pull request wholesale, or requiring that you fix it before your pull request is merged. A reasonable justification for your changes is a requirement. 
+
+Your "Why It's Good For The Game" section must make a good faith and reasonable attempt to:
+* Assert and argue that the current state of affairs in the game is not good, and needs changing.
+* Assert and argue that your pull request will either fix or help fix the problems you described.
+* Assert and argue that any downsides introduced by your solution as a matter of design, if any, are worth it, and why they are worth it.
+
+More controversial changes have higher standards for justification to be considered reasonable. A bugfix for example does not typically require any effort at all in justification as its value to the game is usually self evident, however a major feature overhaul or balance change may require significant explanation to adequately justify its supposed benefit to the game.
+
+This is still a requirement if your pull request is supported and/or requested by maintainers before it is opened. This is still a requirement if your pull request is supported and/or requested by head coders before it is opened. The purpose of arguing for your changes is not to convince just the maintainer team of its merits, it is to document the "why" behind your changes to the game to a necessary level of detail. The reason behind a change must exist as it is the purpose of this codebase to improve the game, thus said reasoning must be adequately stated and explained.
+
+This is also still a requirement if your pull request has a corresponding design document that justifies your changes inside it. You must always properly justify changes (those that actually need justification) within the pull request, even if you also do it elsewhere. This is to ensure that:
+1. All reviewers can easily see the reasoning behind your changes on the pull request itself, no reliance on other sites required.
+2. The actual, manifested implementation of the idea behind the design document is being justified after said implementation is actually realized. This is in contrast to any reasoning put on the design document itself, which very well may have been made before any work was done on it, possibly even by an author different from the author of the pull request. Any idea in the design document may have had compromises put into it due to complications not seen in the original vision, thus the current state of the implementation (the pull request as it stands) must be defended, explained, and ultimately justified in and of itself. Of course, you should still list the design document the pull request is implementing, and may even use arguments from the design document if said arguments are applicable to the current reality of your proposed changes.
+
+## Good Boy Points
+
+Each GitHub account has a score known as Good Boy Points, or GBP. This is a system we use to ensure that the codebase stays maintained and that contributors fix bugs as well as add features.
+
+The GBP gain or loss for a PR depends on the type of changes the PR makes, represented by the tags assigned to the PR by the tgstation github bot or maintainers. Generally speaking, fixing bugs, updating sprites, or improving maps increases your GBP score, while adding mechanics, or rebalancing things will cost you GBP.
+
+The GBP change of a PR is the sum of greatest positive and lowest negative values it has. For example, a PR that has tags worth +10, +4, -1, -7, will net 3 GBP (10 - 7).
+
+Negative GBP increases the likelihood of a maintainer closing your PR. With that chance being higher the lower your GBP is. Be sure to use the proper tags in the changelog to prevent unnecessary GBP loss. Maintainers reserve the right to change tags as they deem appropriate.
+
+There is no benefit to having a higher positive GBP score, since GBP only comes into consideration when it is negative.
+
+You can see each tag and their GBP values [Here](https://github.com/tgstation/tgstation/blob/master/.github/gbp.toml). 
+
+## Porting features/sprites/sounds/tools from other codebases
+
+If you are porting features/tools from other codebases, you must give them credit where it's due. Typically, crediting them in your pull request and the changelog is the recommended way of doing it. Take note of what license they use though, porting stuff from AGPLv3 and GPLv3 codebases are allowed.
+
+Regarding sprites & sounds, you must credit the artist and possibly the codebase. All /tg/station assets including icons and sound are under a [Creative Commons 3.0 BY-SA license](https://creativecommons.org/licenses/by-sa/3.0/) unless otherwise indicated.
 
 ## Banned content
 Do not add any of the following in a Pull Request or risk getting the PR closed:
 * National Socialist Party of Germany content, National Socialist Party of Germany related content, or National Socialist Party of Germany references
-* Code where one line of code is split across mutiple lines (except for multiple, separate strings and comments and in those cases existing longer lines must not be split up)
+* Code adding, removing, or updating the availability of alien races/species/human mutants without prior approval. Pull requests attempting to add or remove features from said races/species/mutants require prior approval as well.
+* Code which violates GitHub's [terms of service](https://github.com/site/terms).
 
-## A word on git
-Yes we know that the files have a tonne of mixed windows and linux line endings, attempts to fix this have been met with less than stellar success and as such we have decided to give up caring until such a time as it matters.
+Just because something isn't on this list doesn't mean that it's acceptable. Use common sense above all else.
 
-Therefore EOF settings of main repo are forbidden territory one must avoid wandering into
+## A word on Git
+This repository uses `LF` line endings for all code as specified in the **.gitattributes** and **.editorconfig** files.
+
+Unless overridden or a non standard git binary is used the line ending settings should be applied to your clone automatically.
+
+Note: VSC requires an [extension](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig) to take advantage of editorconfig.
+
+Github actions that require additional configuration are disabled on the repository until ACTION_ENABLER secret is created with non-empty value.
+
+## Using the Maintainer Role Ping in Discord
+
+This role `@Maintainer` is pingable as a compromise reached with the server host MrStonedOne over the auto-stale system we presently have in the codebase. It should be used only to ping Maintainers when your PR has had the "Stale" label applied. Using it before then can be met with escalating timeouts and referral to /tg/station's Discord moderators for further infractions.
+
+Feel free to engage and obtain general feedback in the Coding General channel without the role ping before your PR goes stale to build interest and get reviews.

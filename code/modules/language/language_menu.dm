@@ -1,88 +1,127 @@
 /datum/language_menu
-	var/mob/living/owner
+	var/datum/language_holder/language_holder
 
-/datum/language_menu/New(new_owner)
-	owner = new_owner
+/datum/language_menu/New(_language_holder)
+	language_holder = _language_holder
 
 /datum/language_menu/Destroy()
-	owner = null
+	language_holder = null
 	. = ..()
 
-/datum/language_menu/ui_interact(mob/user, ui_key = "main", datum/tgui/ui = null, force_open = 0, datum/tgui/master_ui = null, datum/ui_state/state = GLOB.language_menu_state)
-	ui = SStgui.try_update_ui(user, src, ui_key, ui, force_open)
+/datum/language_menu/ui_state(mob/user)
+	return GLOB.language_menu_state
+
+/datum/language_menu/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
 	if(!ui)
-		ui = new(user, src, ui_key, "language_menu", "Language Menu", 700, 800, master_ui, state)
+		ui = new(user, src, "LanguageMenu")
 		ui.open()
 
 /datum/language_menu/ui_data(mob/user)
 	var/list/data = list()
 
-	var/datum/language/mob_default_language = owner.get_default_language()
-
+	var/atom/movable/speaker = language_holder.owner
+	data["is_living"] = isliving(speaker)
 	data["languages"] = list()
-	for(var/ld in owner.languages)
-		var/datum/language/LD = ld
-		var/list/L = list()
+	for(var/datum/language/language as anything in GLOB.all_languages)
+		var/result = language_holder.has_language(language) || language_holder.has_language(language, SPOKEN_LANGUAGE)
+		if(!result)
+			continue
+		var/list/lang_data = list()
 
-		L["name"] = initial(LD.name)
-		L["desc"] = initial(LD.desc)
-		L["key"] = initial(LD.key)
-		L["is_default"] = (LD == mob_default_language)
-		L["can_speak"] = owner.can_speak_in_language(LD)
+		lang_data["name"] = initial(language.name)
+		lang_data["desc"] = initial(language.desc)
+		lang_data["key"] = initial(language.key)
+		lang_data["is_default"] = (language == language_holder.selected_language)
+		if(speaker)
+			lang_data["can_speak"] = speaker.can_speak_language(language)
+			lang_data["can_understand"] = speaker.has_language(language)
 
-		data["languages"] += list(L)
+		UNTYPED_LIST_ADD(data["languages"], lang_data)
 
-	if(check_rights_for(user.client, R_ADMIN))
+	if(check_rights_for(user.client, R_ADMIN) || isobserver(speaker))
 		data["admin_mode"] = TRUE
-		data["omnitongue"] = HAS_SECONDARY_FLAG(owner, OMNITONGUE)
-
+		data["omnitongue"] = language_holder.omnitongue
 		data["unknown_languages"] = list()
-		for(var/ld in subtypesof(/datum/language))
-			if(owner.has_language(ld))
+		for(var/datum/language/language as anything in GLOB.all_languages)
+			if(language_holder.has_language(language) || language_holder.has_language(language, SPOKEN_LANGUAGE))
 				continue
-			var/datum/language/LD = ld
-			var/list/L = list()
+			var/list/lang_data = list()
 
-			L["name"] = initial(LD.name)
-			L["desc"] = initial(LD.desc)
-			L["key"] = initial(LD.key)
+			lang_data["name"] = initial(language.name)
+			lang_data["desc"] = initial(language.desc)
+			lang_data["key"] = initial(language.key)
 
-			data["unknown_languages"] += list(L)
+			UNTYPED_LIST_ADD(data["unknown_languages"], lang_data)
+
 	return data
 
 /datum/language_menu/ui_act(action, params)
-	if(..())
+	. = ..()
+	if(.)
 		return
 	var/mob/user = usr
-
+	var/atom/movable/speaker = language_holder.owner
+	var/is_admin = check_rights_for(user.client, R_ADMIN)
 	var/language_name = params["language_name"]
 	var/datum/language/language_datum
-	for(var/ld in subtypesof(/datum/language))
-		var/datum/language/LD = ld
-		if(language_name == initial(LD.name))
-			language_datum = LD
-	var/is_admin = check_rights_for(user.client, R_ADMIN)
+	for(var/datum/language/language as anything in GLOB.all_languages)
+		if(language_name == initial(language.name))
+			language_datum = language
 
 	switch(action)
 		if("select_default")
-			if(language_datum)
-				owner.selected_default_language = language_datum
+			if(language_datum && speaker.can_speak_language(language_datum))
+				language_holder.selected_language = language_datum
 				. = TRUE
 		if("grant_language")
-			if(is_admin && language_datum)
-				owner.grant_language(language_datum)
-				message_admins("[key_name_admin(user)] granted the [language_name] language to [key_name_admin(owner)].")
-				log_admin("[key_name(user)] granted the language [language_name] to [key_name(owner)].")
+			if((is_admin || isobserver(speaker)) && language_datum)
+				var/list/choices = list("Only Spoken", "Only Understood", "Both")
+				var/choice = tgui_input_list(user, "How do you want to add this language?", "[language_datum]", choices)
+				if(isnull(choice))
+					return
+				var/adding_flags = NONE
+				switch(choice)
+					if("Only Spoken")
+						adding_flags |= SPOKEN_LANGUAGE
+					if("Only Understood")
+						adding_flags |= UNDERSTOOD_LANGUAGE
+					if("Both")
+						adding_flags |= ALL
+
+				if(LAZYACCESS(language_holder.blocked_languages, language_datum))
+					choice = tgui_alert(user, "Do you want to lift the blockage that's also preventing the language to be spoken or understood?", "[language_datum]", list("Yes", "No"))
+					if(choice == "Yes")
+						language_holder.remove_blocked_language(language_datum, LANGUAGE_ALL)
+				language_holder.grant_language(language_datum, adding_flags)
+				if(is_admin)
+					message_admins("[key_name_admin(user)] granted the [language_name] language to [key_name_admin(speaker)].")
+					log_admin("[key_name(user)] granted the language [language_name] to [key_name(speaker)].")
 				. = TRUE
 		if("remove_language")
-			if(is_admin && language_datum)
-				owner.remove_language(language_datum)
-				message_admins("[key_name_admin(user)] removed the [language_name] language to [key_name_admin(owner)].")
-				log_admin("[key_name(user)] removed the language [language_name] to [key_name(owner)].")
+			if((is_admin || isobserver(speaker)) && language_datum)
+				var/list/choices = list("Only Spoken", "Only Understood", "Both")
+				var/choice = tgui_input_list(user, "Which part do you wish to remove?", "[language_datum]", choices)
+				if(isnull(choice))
+					return
+				var/removing_flags = NONE
+				switch(choice)
+					if("Only Spoken")
+						removing_flags |= SPOKEN_LANGUAGE
+					if("Only Understood")
+						removing_flags |= UNDERSTOOD_LANGUAGE
+					if("Both")
+						removing_flags |= ALL
+
+				language_holder.remove_language(language_datum, removing_flags)
+				if(is_admin)
+					message_admins("[key_name_admin(user)] removed the [language_name] language to [key_name_admin(speaker)].")
+					log_admin("[key_name(user)] removed the language [language_name] to [key_name(speaker)].")
 				. = TRUE
 		if("toggle_omnitongue")
-			if(is_admin)
-				TOGGLE_SECONDARY_FLAG(owner, OMNITONGUE)
-				message_admins("[key_name_admin(user)] [HAS_SECONDARY_FLAG(owner, OMNITONGUE) ? "enabled" : "disabled"] the ability to speak all languages (that they know) of [key_name_admin(owner)].")
-				log_admin("[key_name(user)] [HAS_SECONDARY_FLAG(owner, OMNITONGUE) ? "enabled" : "disabled"] the ability to speak all languages (that_they know) of [key_name(owner)].")
+			if(is_admin || isobserver(speaker))
+				language_holder.omnitongue = !language_holder.omnitongue
+				if(is_admin)
+					message_admins("[key_name_admin(user)] [language_holder.omnitongue ? "enabled" : "disabled"] the ability to speak all languages (that they know) of [key_name_admin(speaker)].")
+					log_admin("[key_name(user)] [language_holder.omnitongue ? "enabled" : "disabled"] the ability to speak all languages (that_they know) of [key_name(speaker)].")
 				. = TRUE

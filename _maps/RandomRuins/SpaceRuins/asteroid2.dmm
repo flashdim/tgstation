@@ -3,18 +3,16 @@
 /turf/template_noop,
 /area/template_noop)
 "b" = (
-/turf/open/floor/plating/asteroid/airless,
-/area/ruin/unpowered/no_grav)
+/turf/open/misc/asteroid/airless,
+/area/ruin/space)
 "c" = (
-/turf/closed/mineral,
-/area/ruin/unpowered/no_grav)
+/turf/closed/mineral/random,
+/area/ruin/space)
 "d" = (
 /turf/closed/mineral/random/high_chance,
-/area/ruin/unpowered/no_grav)
+/area/ruin/space)
 
 (1,1,1) = {"
-a
-a
 a
 a
 a
@@ -38,8 +36,6 @@ a
 a
 a
 a
-a
-a
 b
 b
 b
@@ -57,8 +53,6 @@ a
 a
 "}
 (3,1,1) = {"
-a
-a
 a
 a
 b
@@ -80,8 +74,6 @@ a
 "}
 (4,1,1) = {"
 a
-a
-a
 b
 b
 b
@@ -102,8 +94,6 @@ a
 "}
 (5,1,1) = {"
 a
-a
-a
 b
 b
 b
@@ -123,8 +113,6 @@ a
 a
 "}
 (6,1,1) = {"
-a
-a
 b
 b
 b
@@ -145,8 +133,6 @@ a
 a
 "}
 (7,1,1) = {"
-a
-a
 b
 b
 b
@@ -167,8 +153,6 @@ a
 a
 "}
 (8,1,1) = {"
-a
-a
 b
 b
 c
@@ -189,8 +173,6 @@ a
 a
 "}
 (9,1,1) = {"
-a
-a
 b
 b
 b
@@ -212,8 +194,6 @@ a
 "}
 (10,1,1) = {"
 a
-a
-a
 b
 b
 b
@@ -233,8 +213,6 @@ b
 a
 "}
 (11,1,1) = {"
-a
-a
 a
 b
 b
@@ -257,8 +235,6 @@ a
 (12,1,1) = {"
 a
 a
-a
-a
 b
 b
 d
@@ -271,14 +247,12 @@ d
 c
 c
 c
-d
+b
 c
 b
 a
 "}
 (13,1,1) = {"
-a
-a
 a
 a
 b
@@ -301,8 +275,6 @@ b
 (14,1,1) = {"
 a
 a
-a
-a
 b
 b
 b
@@ -321,8 +293,6 @@ c
 b
 "}
 (15,1,1) = {"
-a
-a
 a
 a
 a
@@ -349,8 +319,6 @@ a
 a
 a
 a
-a
-a
 b
 b
 b
@@ -365,8 +333,6 @@ b
 b
 "}
 (17,1,1) = {"
-a
-a
 a
 b
 a
@@ -387,8 +353,6 @@ a
 a
 "}
 (18,1,1) = {"
-a
-a
 a
 b
 b
@@ -417,8 +381,6 @@ a
 a
 a
 a
-a
-a
 b
 b
 b
@@ -431,8 +393,6 @@ a
 a
 "}
 (20,1,1) = {"
-a
-a
 b
 a
 a

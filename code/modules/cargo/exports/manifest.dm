@@ -1,76 +1,89 @@
+#define MAX_MANIFEST_PENALTY CARGO_CRATE_VALUE * 2.5
+
 // Approved manifest.
-// +200 credits flat.
+// +80 credits flat.
 /datum/export/manifest_correct
-	cost = 200
+	cost = CARGO_CRATE_VALUE * 0.4
+	k_elasticity = 0
 	unit_name = "approved manifest"
-	export_types = list(/obj/item/weapon/paper/manifest)
+	export_types = list(/obj/item/paper/fluff/jobs/cargo/manifest)
+	scannable = FALSE
 
 /datum/export/manifest_correct/applies_to(obj/O)
 	if(!..())
 		return FALSE
 
-	var/obj/item/weapon/paper/manifest/M = O
+	var/obj/item/paper/fluff/jobs/cargo/manifest/M = O
 	if(M.is_approved() && !M.errors)
 		return TRUE
 	return FALSE
 
 // Correctly denied manifest.
-// Refunds the package cost minus the cost of crate.
+// Refunds package cost minus the value of the crate.
 /datum/export/manifest_error_denied
-	cost = -500
+	cost = -CARGO_CRATE_VALUE
+	k_elasticity = 0
 	unit_name = "correctly denied manifest"
-	export_types = list(/obj/item/weapon/paper/manifest)
+	export_types = list(/obj/item/paper/fluff/jobs/cargo/manifest)
+	scannable = FALSE
 
 /datum/export/manifest_error_denied/applies_to(obj/O)
 	if(!..())
 		return FALSE
 
-	var/obj/item/weapon/paper/manifest/M = O
+	var/obj/item/paper/fluff/jobs/cargo/manifest/M = O
 	if(M.is_denied() && M.errors)
 		return TRUE
 	return FALSE
 
 /datum/export/manifest_error_denied/get_cost(obj/O)
-	var/obj/item/weapon/paper/manifest/M = O
+	var/obj/item/paper/fluff/jobs/cargo/manifest/M = O
 	return ..() + M.order_cost
 
 
 // Erroneously approved manifest.
-// Substracts the package cost.
+// Subtracts half the package cost. (max -500 credits)
 /datum/export/manifest_error
 	unit_name = "erroneously approved manifest"
-	export_types = list(/obj/item/weapon/paper/manifest)
+	k_elasticity = 0
+	export_types = list(/obj/item/paper/fluff/jobs/cargo/manifest)
+	allow_negative_cost = TRUE
+	scannable = FALSE
 
 /datum/export/manifest_error/applies_to(obj/O)
 	if(!..())
 		return FALSE
 
-	var/obj/item/weapon/paper/manifest/M = O
+	var/obj/item/paper/fluff/jobs/cargo/manifest/M = O
 	if(M.is_approved() && M.errors)
 		return TRUE
 	return FALSE
 
 /datum/export/manifest_error/get_cost(obj/O)
-	var/obj/item/weapon/paper/manifest/M = O
-	return -M.order_cost
+	var/obj/item/paper/fluff/jobs/cargo/manifest/M = O
+	return -min(M.order_cost * 0.5, MAX_MANIFEST_PENALTY)
 
 
 // Erroneously denied manifest.
-// Substracts the package cost minus the cost of crate.
+// Subtracts half the package cost. (max -500 credits)
 /datum/export/manifest_correct_denied
-	cost = 500
+	k_elasticity = 0
 	unit_name = "erroneously denied manifest"
-	export_types = list(/obj/item/weapon/paper/manifest)
+	export_types = list(/obj/item/paper/fluff/jobs/cargo/manifest)
+	allow_negative_cost = TRUE
+	scannable = FALSE
 
 /datum/export/manifest_correct_denied/applies_to(obj/O)
 	if(!..())
 		return FALSE
 
-	var/obj/item/weapon/paper/manifest/M = O
+	var/obj/item/paper/fluff/jobs/cargo/manifest/M = O
 	if(M.is_denied() && !M.errors)
 		return TRUE
 	return FALSE
 
 /datum/export/manifest_correct_denied/get_cost(obj/O)
-	var/obj/item/weapon/paper/manifest/M = O
-	return ..() - M.order_cost
+	var/obj/item/paper/fluff/jobs/cargo/manifest/M = O
+	return -min(M.order_cost * 0.5, MAX_MANIFEST_PENALTY)
+
+#undef MAX_MANIFEST_PENALTY

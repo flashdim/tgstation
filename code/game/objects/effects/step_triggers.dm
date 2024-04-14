@@ -5,96 +5,106 @@
 	var/stopper = 1 // stops throwers
 	var/mobs_only = FALSE
 	invisibility = INVISIBILITY_ABSTRACT // nope cant see this shit
-	anchored = 1
+	anchored = TRUE
+
+/obj/effect/step_trigger/Initialize(mapload)
+	. = ..()
+	var/static/list/loc_connections = list(
+		COMSIG_ATOM_ENTERED = PROC_REF(on_entered),
+	)
+	AddElement(/datum/element/connect_loc, loc_connections)
 
 /obj/effect/step_trigger/proc/Trigger(atom/movable/A)
 	return 0
 
-/obj/effect/step_trigger/Crossed(H as mob|obj)
-	..()
-	if(!H)
+/obj/effect/step_trigger/proc/on_entered(datum/source, H as mob|obj)
+	SIGNAL_HANDLER
+	if(!H || H == src)
 		return
 	if(isobserver(H) && !affect_ghosts)
 		return
-	if(!istype(H, /mob) && mobs_only)
+	if(!ismob(H) && mobs_only)
 		return
-	Trigger(H)
+	INVOKE_ASYNC(src, PROC_REF(Trigger), H)
+
+
+/obj/effect/step_trigger/singularity_act()
+	return
+
+/obj/effect/step_trigger/singularity_pull()
+	return
 
 /* Sends a message to mob when triggered*/
 
 /obj/effect/step_trigger/message
-	var/message	//the message to give to the mob
+	var/message //the message to give to the mob
 	var/once = 1
 	mobs_only = TRUE
 
 /obj/effect/step_trigger/message/Trigger(mob/M)
 	if(M.client)
-		to_chat(M, "<span class='info'>[message]</span>")
+		to_chat(M, span_info("[message]"))
 		if(once)
 			qdel(src)
 
 /* Tosses things in a certain direction */
-
 /obj/effect/step_trigger/thrower
 	var/direction = SOUTH // the direction of throw
-	var/tiles = 3	// if 0: forever until atom hits a stopper
+	var/tiles = 3 // if 0: forever until atom hits a stopper
 	var/immobilize = 1 // if nonzero: prevents mobs from moving while they're being flung
-	var/speed = 1	// delay of movement
+	var/speed = 1 // delay of movement
 	var/facedir = 0 // if 1: atom faces the direction of movement
 	var/nostop = 0 // if 1: will only be stopped by teleporters
+	///List of moving atoms mapped to their inital direction
 	var/list/affecting = list()
 
 /obj/effect/step_trigger/thrower/Trigger(atom/A)
-	if(!A || !istype(A, /atom/movable))
+	if(!A || !ismovable(A))
 		return
 	var/atom/movable/AM = A
-	var/curtiles = 0
-	var/stopthrow = 0
 	for(var/obj/effect/step_trigger/thrower/T in orange(2, src))
 		if(AM in T.affecting)
 			return
 
-	if(ismob(AM))
-		var/mob/M = AM
-		if(immobilize)
-			M.canmove = 0
+	if(immobilize)
+		ADD_TRAIT(AM, TRAIT_IMMOBILIZED, REF(src))
 
-	affecting.Add(AM)
-	while(AM && !stopthrow)
-		if(tiles)
-			if(curtiles >= tiles)
-				break
-		if(AM.z != src.z)
-			break
+	affecting[AM] = AM.dir
+	var/datum/move_loop/loop = SSmove_manager.move(AM, direction, speed, tiles ? tiles * speed : INFINITY)
+	RegisterSignal(loop, COMSIG_MOVELOOP_PREPROCESS_CHECK, PROC_REF(pre_move))
+	RegisterSignal(loop, COMSIG_MOVELOOP_POSTPROCESS, PROC_REF(post_move))
+	RegisterSignal(loop, COMSIG_QDELETING, PROC_REF(set_to_normal))
 
-		curtiles++
+/obj/effect/step_trigger/thrower/proc/pre_move(datum/move_loop/source)
+	SIGNAL_HANDLER
+	var/atom/movable/being_moved = source.moving
+	affecting[being_moved] = being_moved.dir
 
-		sleep(speed)
+/obj/effect/step_trigger/thrower/proc/post_move(datum/move_loop/source)
+	SIGNAL_HANDLER
+	var/atom/movable/being_moved = source.moving
+	if(!facedir)
+		being_moved.setDir(affecting[being_moved])
+	if(being_moved.z != z)
+		qdel(source)
+		return
+	if(!nostop)
+		for(var/obj/effect/step_trigger/T in get_turf(being_moved))
+			if(T.stopper && T != src)
+				qdel(source)
+				return
+	else
+		for(var/obj/effect/step_trigger/teleporter/T in get_turf(being_moved))
+			if(T.stopper)
+				qdel(source)
+				return
 
-		// Calculate if we should stop the process
-		if(!nostop)
-			for(var/obj/effect/step_trigger/T in get_step(AM, direction))
-				if(T.stopper && T != src)
-					stopthrow = 1
-		else
-			for(var/obj/effect/step_trigger/teleporter/T in get_step(AM, direction))
-				if(T.stopper)
-					stopthrow = 1
+/obj/effect/step_trigger/thrower/proc/set_to_normal(datum/move_loop/source)
+	SIGNAL_HANDLER
+	var/atom/movable/being_moved = source.moving
+	affecting -= being_moved
+	REMOVE_TRAIT(being_moved, TRAIT_IMMOBILIZED, REF(src))
 
-		if(AM)
-			var/predir = AM.dir
-			step(AM, direction)
-			if(!facedir)
-				AM.setDir(predir)
-
-
-
-	affecting.Remove(AM)
-
-	if(ismob(AM))
-		var/mob/M = AM
-		if(immobilize)
-			M.canmove = 1
 
 /* Stops things thrown by a thrower, doesn't do anything */
 
@@ -103,16 +113,15 @@
 /* Instant teleporter */
 
 /obj/effect/step_trigger/teleporter
-	var/teleport_x = 0	// teleportation coordinates (if one is null, then no teleport!)
+	var/teleport_x = 0 // teleportation coordinates (if one is null, then no teleport!)
 	var/teleport_y = 0
 	var/teleport_z = 0
 
 /obj/effect/step_trigger/teleporter/Trigger(atom/movable/A)
 	if(teleport_x && teleport_y && teleport_z)
 
-		A.x = teleport_x
-		A.y = teleport_y
-		A.z = teleport_z
+		var/turf/T = locate(teleport_x, teleport_y, teleport_z)
+		A.forceMove(T)
 
 /* Random teleporter, teleports atoms to locations ranging from teleport_x - teleport_x_offset, etc */
 
@@ -125,16 +134,36 @@
 	if(teleport_x && teleport_y && teleport_z)
 		if(teleport_x_offset && teleport_y_offset && teleport_z_offset)
 
-			A.x = rand(teleport_x, teleport_x_offset)
-			A.y = rand(teleport_y, teleport_y_offset)
-			A.z = rand(teleport_z, teleport_z_offset)
+			var/turf/T = locate(rand(teleport_x, teleport_x_offset), rand(teleport_y, teleport_y_offset), rand(teleport_z, teleport_z_offset))
+			if (T)
+				A.forceMove(T)
+
+/* Teleports atoms directly to an offset, no randomness, looping hallways! */
+
+/obj/effect/step_trigger/teleporter/offset
+	var/teleport_x_offset = 0
+	var/teleport_y_offset = 0
+
+/obj/effect/step_trigger/teleporter/offset/on_entered(datum/source, H as mob|obj, atom/old_loc)
+	if(!old_loc?.Adjacent(loc)) // prevents looping, if we were teleported into this then the old loc is usually not adjacent
+		return
+	return ..()
+
+/obj/effect/step_trigger/teleporter/offset/Trigger(atom/movable/poor_soul)
+	var/turf/destination = locate(x + teleport_x_offset, y + teleport_y_offset, z)
+	if(!destination)
+		return
+	poor_soul.forceMove(destination)
+	var/mob/living/living_soul = poor_soul
+	if(istype(living_soul) && living_soul.client)
+		living_soul.client.move_delay = 0
 
 /* Fancy teleporter, creates sparks and smokes when used */
 
 /obj/effect/step_trigger/teleport_fancy
 	var/locationx
 	var/locationy
-	var/uses = 1	//0 for infinite uses
+	var/uses = 1 //0 for infinite uses
 	var/entersparks = 0
 	var/exitsparks = 0
 	var/entersmoke = 0
@@ -154,12 +183,12 @@
 		s.start()
 
 	if(entersmoke)
-		var/datum/effect_system/smoke_spread/s = new
-		s.set_up(4, 1, src, 0)
+		var/datum/effect_system/fluid_spread/smoke/s = new
+		s.set_up(4, holder = src, location = src)
 		s.start()
 	if(exitsmoke)
-		var/datum/effect_system/smoke_spread/s = new
-		s.set_up(4, 1, dest, 0)
+		var/datum/effect_system/fluid_spread/smoke/s = new
+		s.set_up(4, holder = src, location = dest)
 		s.start()
 
 	uses--
@@ -183,11 +212,11 @@
 	if(!T)
 		return
 
-	if(triggerer_only)
-		A.playsound_local(T, sound, volume, freq_vary)
+	if(triggerer_only && ismob(A))
+		var/mob/B = A
+		B.playsound_local(T, sound, volume, freq_vary)
 	else
 		playsound(T, sound, volume, freq_vary, extra_range)
 
 	if(happens_once)
 		qdel(src)
-

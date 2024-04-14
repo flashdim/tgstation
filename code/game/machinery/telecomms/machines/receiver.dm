@@ -1,98 +1,78 @@
-
-/*
-	The receiver idles and receives messages from subspace-compatible radio equipment;
-	primarily headsets. They then just relay this information to all linked devices,
-	which can would probably be network hubs.
-
-	Link to Processor Units in case receiver can't send to bus units.
-*/
-
+/**
+ * The receiver idles and receives messages from subspace-compatible radio equipment,
+ * primarily headsets. Then they just relay this information to all linked devices,
+ * which would usually be through the telecommunications hub.
+ *
+ * Link to Processor Units in case receiver can't send to a telecommunication hub.
+ */
 /obj/machinery/telecomms/receiver
 	name = "subspace receiver"
 	icon_state = "broadcast receiver"
 	desc = "This machine has a dish-like shape and green lights. It is designed to detect and process subspace radio activity."
-	density = 1
-	anchored = 1
-	use_power = 1
-	idle_power_usage = 30
-	machinetype = 1
-	//heatgen = 0
+	telecomms_type = /obj/machinery/telecomms/receiver
+	density = TRUE
+	idle_power_usage = BASE_MACHINE_IDLE_CONSUMPTION * 0.05
+	circuit = /obj/item/circuitboard/machine/telecomms/receiver
 
-/obj/machinery/telecomms/receiver/receive_signal(datum/signal/signal)
-
-	if(!on) // has to be on to receive messages
+/obj/machinery/telecomms/receiver/receive_signal(datum/signal/subspace/signal)
+	if(!on || !istype(signal) || !check_receive_level(signal) || signal.transmission_method != TRANSMISSION_SUBSPACE)
 		return
-	if(!signal)
+	if(!is_freq_listening(signal))
 		return
-	if(!check_receive_level(signal))
-		return
-	if(signal.transmission_method == 2)
 
-		if(is_freq_listening(signal)) // detect subspace signals
+	// Make a copy of the signal so that other receivers can still receive this signal
+	var/datum/signal/subspace/signal_copy = signal.copy()
 
-			//Remove the level and then start adding levels that it is being broadcasted in.
-			signal.data["level"] = list()
+	// Signal has been received, so remove receiving levels. This list will be used later on to determine broadcasting levels.
+	signal_copy.levels = list()
 
-			var/can_send = relay_information(signal, "/obj/machinery/telecomms/hub") // ideally relay the copied information to relays
-			if(!can_send)
-				relay_information(signal, "/obj/machinery/telecomms/bus") // Send it to a bus instead, if it's linked to one
+	// Send the signal to a hub if possible, or a bus otherwise.
+	if(!relay_information(signal_copy, /obj/machinery/telecomms/hub))
+		relay_information(signal_copy, /obj/machinery/telecomms/bus)
 
-/obj/machinery/telecomms/receiver/proc/check_receive_level(datum/signal/signal)
+	use_energy(idle_power_usage)
 
-	if(signal.data["level"] != listening_level)
-		for(var/obj/machinery/telecomms/hub/H in links)
-			var/list/connected_levels = list()
-			for(var/obj/machinery/telecomms/relay/R in H.links)
-				if(R.can_receive(signal))
-					connected_levels |= R.listening_level
-			if(signal.data["level"] in connected_levels)
-				return 1
-		return 0
-	return 1
+/**
+ * Checks whether the signal can be received by this receiver or not, based on
+ * if it's in the signal's `levels`, or if there's a liked hub with a linked
+ * relay that can receive the signal for it.
+ *
+ * Returns `TRUE` if it can receive the signal, `FALSE` if not.
+ */
+/obj/machinery/telecomms/receiver/proc/check_receive_level(datum/signal/subspace/signal)
+	if (z in signal.levels)
+		return TRUE
 
+	for(var/obj/machinery/telecomms/hub/linked_hub in links)
+		for(var/obj/machinery/telecomms/relay/linked_relay in linked_hub.links)
+			if(linked_relay.can_receive(signal) && (linked_relay.z in signal.levels))
+				return TRUE
 
-/obj/machinery/telecomms/receiver/New()
-	..()
-	var/obj/item/weapon/circuitboard/machine/B = new /obj/item/weapon/circuitboard/machine/telecomms/receiver(null)
-	B.apply_default_parts(src)
+	return FALSE
 
-/obj/item/weapon/circuitboard/machine/telecomms/receiver
-	name = "Subspace Receiver (Machine Board)"
-	build_path = /obj/machinery/telecomms/receiver
-	origin_tech = "programming=2;engineering=2;bluespace=1"
-	req_components = list(
-							/obj/item/weapon/stock_parts/subspace/ansible = 1,
-							/obj/item/weapon/stock_parts/subspace/filter = 1,
-							/obj/item/weapon/stock_parts/manipulator = 2,
-							/obj/item/weapon/stock_parts/micro_laser = 1)
-
-
-
-
-//Preset Receivers
+// Preset Receivers
 
 //--PRESET LEFT--//
-
 /obj/machinery/telecomms/receiver/preset_left
 	id = "Receiver A"
 	network = "tcommsat"
 	autolinkers = list("receiverA") // link to relay
-	freq_listening = list(GLOB.SCI_FREQ, GLOB.MED_FREQ, GLOB.SUPP_FREQ, GLOB.SERV_FREQ) // science, medical, supply, service
+	freq_listening = list(FREQ_SCIENCE, FREQ_MEDICAL, FREQ_SUPPLY, FREQ_SERVICE)
 
 
 //--PRESET RIGHT--//
-
 /obj/machinery/telecomms/receiver/preset_right
 	id = "Receiver B"
 	network = "tcommsat"
 	autolinkers = list("receiverB") // link to relay
-	freq_listening = list(GLOB.COMM_FREQ, GLOB.ENG_FREQ, GLOB.SEC_FREQ) //command, engineering, security
+	freq_listening = list(FREQ_COMMAND, FREQ_ENGINEERING, FREQ_SECURITY)
 
-	//Common and other radio frequencies for people to freely use
-/obj/machinery/telecomms/receiver/preset_right/New()
-	for(var/i = 1441, i < 1489, i += 2)
+/obj/machinery/telecomms/receiver/preset_right/Initialize(mapload)
+	. = ..()
+	// Also add common and other freely-available radio frequencies for people
+	// to have access to.
+	for(var/i = MIN_FREQ, i <= MAX_FREQ, i += 2)
 		freq_listening |= i
-	..()
 
 /obj/machinery/telecomms/receiver/preset_left/birdstation
 	name = "Receiver"

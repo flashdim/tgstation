@@ -1,40 +1,36 @@
-
-/obj/item/device/pipe_painter
+/obj/item/pipe_painter
 	name = "pipe painter"
-	icon = 'icons/obj/bureaucracy.dmi'
+	desc = "Used for coloring pipes, unsurprisingly."
+	icon = 'icons/obj/service/bureaucracy.dmi'
 	icon_state = "labeler1"
-	item_state = "flight"
-	flags = NOBLUDGEON
-	var/list/modes = list(
-		"grey"		= rgb(255,255,255),
-		"red"			= rgb(255,0,0),
-		"blue"		= rgb(0,0,255),
-		"cyan"		= rgb(0,256,249),
-		"green"		= rgb(30,255,0),
-		"yellow"	= rgb(255,198,0),
-		"purple"	= rgb(130,43,255)
-	)
-	var/mode = "grey"
+	inhand_icon_state = null
+	item_flags = NOBLUDGEON
+	var/paint_color = "grey"
 
-	materials = list(MAT_METAL=5000, MAT_GLASS=2000)
+	custom_materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 2.5, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
 
-/obj/item/device/pipe_painter/afterattack(atom/A, mob/user, proximity_flag)
+/obj/item/pipe_painter/afterattack(atom/target, mob/user, proximity_flag)
+	. = ..()
 	//Make sure we only paint adjacent items
 	if(!proximity_flag)
 		return
 
-	if(!istype(A,/obj/machinery/atmospherics/pipe))
-		return
+	if(istype(target, /obj/machinery/atmospherics))
+		var/obj/machinery/atmospherics/target_pipe = target
+		target_pipe.paint(GLOB.pipe_paint_colors[paint_color])
+		playsound(src, 'sound/machines/click.ogg', 50, TRUE)
+		balloon_alert(user, "painted in [paint_color] color")
+	else if(istype(target, /obj/item/pipe))
+		var/obj/item/pipe/target_pipe = target
+		var/color = GLOB.pipe_paint_colors[paint_color]
+		target_pipe.pipe_color = color
+		target.add_atom_colour(color, FIXED_COLOUR_PRIORITY)
+		playsound(src, 'sound/machines/click.ogg', 50, TRUE)
+		balloon_alert(user, "painted in [paint_color] color")
 
-	var/obj/machinery/atmospherics/pipe/P = A
-	P.add_atom_colour(modes[mode], FIXED_COLOUR_PRIORITY)
-	P.pipe_color = modes[mode]
-	user.visible_message("<span class='notice'>[user] paints \the [P] [mode].</span>","<span class='notice'>You paint \the [P] [mode].</span>")
-	P.update_node_icon() //updates the neighbors
+/obj/item/pipe_painter/attack_self(mob/user)
+	paint_color = tgui_input_list(user, "Which colour do you want to use?", "Pipe painter", GLOB.pipe_paint_colors)
 
-/obj/item/device/pipe_painter/attack_self(mob/user)
-	mode = input("Which colour do you want to use?","Pipe painter") in modes
-
-/obj/item/device/pipe_painter/examine()
-	..()
-	to_chat(usr, "It is set to [mode].")
+/obj/item/pipe_painter/examine(mob/user)
+	. = ..()
+	. += span_notice("It is set to [paint_color].")

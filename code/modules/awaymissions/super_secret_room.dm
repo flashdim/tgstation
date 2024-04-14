@@ -4,15 +4,20 @@
 	verb_say = "intones"
 	icon = 'icons/obj/structures.dmi'
 	icon_state = "speaking_tile"
-	layer = 5
+	layer = FLY_LAYER
+	plane = ABOVE_GAME_PLANE
+	resistance_flags = INDESTRUCTIBLE
 	var/speaking = FALSE
 	var/times_spoken_to = 0
 	var/list/shenanigans = list()
 
-/obj/structure/speaking_tile/New()
-	var/savefile/S = new /savefile("data/npc_saves/Poly.sav")
-	S["phrases"] 			>> shenanigans
-	..()
+/obj/structure/speaking_tile/Initialize(mapload)
+	. = ..()
+	var/json_file = file("data/npc_saves/Poly.json")
+	if(!fexists(json_file))
+		return
+	var/list/json = json_decode(file2text(json_file))
+	shenanigans = json["phrases"]
 
 /obj/structure/speaking_tile/interact(mob/user)
 	if(!isliving(user) || speaking)
@@ -22,10 +27,10 @@
 	switch(times_spoken_to)
 		if(0)
 			SpeakPeace(list("Welcome to the error handling room.","Something's goofed up bad to send you here.","You should probably tell an admin what you were doing, or make a bug report."))
-			for(var/obj/structure/signpost/salvation/S in orange(7))
-				S.invisibility = 0
-				var/datum/effect_system/smoke_spread/smoke = new
-				smoke.set_up(1, S.loc)
+			for(var/obj/structure/signpost/salvation/sign in orange(7))
+				sign.SetInvisibility(INVISIBILITY_NONE)
+				var/datum/effect_system/fluid_spread/smoke/smoke = new
+				smoke.set_up(1, holder = src, location = sign.loc)
 				smoke.start()
 				break
 		if(1)
@@ -42,11 +47,11 @@
 			SpeakPeace(list("Alright maybe that's <b>too</b> boring.", "I can't keep manually typing these lines out though.", "It's hard to explain but the code structure I'm using is kind of terrible."))
 		if(10)
 			SpeakPeace(list("Oh I have an idea!", "Lets outsource this endless banter to Poly!", "Then you'll be able to keep listening to this without getting bored!"))
-			if(isnull(shenanigans))
+			if(isnull(shenanigans) || !shenanigans.len)
 				shenanigans = list("Except the poly file is missing...")
 		if(11 to 14, 16 to 50, 52 to 99, 103 to 107, 109 to 203, 205 to 249, 252 to 665, 667 to 999, 1001 to 5642)
 			SpeakPeace(list(pick(shenanigans),pick(shenanigans),pick(shenanigans)))
-			if(times_spoken_to * 0.1 == round(times_spoken_to * 0.1))
+			if(times_spoken_to % 10 == 0)
 				SpeakPeace(list("That's [times_spoken_to] times you've spoken to me by the way."))
 		if(15)
 			SpeakPeace(list("See? Isn't this fun?","Now you can mash this for hours without getting bored.","Anyway I'll leave you it."))
@@ -63,10 +68,10 @@
 		if(204)
 			SpeakPeace(list("Notice how there was no special message at 200?", "The slow automation of what used to be meaningful milestones?","It's all part of the joke."))
 		if(250)
-			SpeakPeace(list("Congratulations.", "By my very loose calculations you've now wasted a decent chunk of the round doing this.", "But you've seen this meme to its conclusion, and that's a experience in itself, right?"))
+			SpeakPeace(list("Congratulations.", "By my very loose calculations you've now wasted a decent chunk of the round doing this.", "But you've seen this meme to its conclusion, and that's an experience in itself, right?"))
 		if(251)
 			SpeakPeace(list("Anyway, here.", "I can't give you anything that would impact the progression of the round.","But you've earned this at least."))
-			var/obj/item/weapon/reagent_containers/food/drinks/trophy/silver_cup/the_ride = new(get_turf(user))
+			var/obj/item/reagent_containers/cup/glass/trophy/silver_cup/the_ride = new(get_turf(user))
 			the_ride.name = "Overextending The Joke: Second Place"
 			the_ride.desc = "There's a point where this needed to stop, and we've clearly passed it."
 		if(252)
@@ -76,20 +81,39 @@
 		if(1000)
 			SpeakPeace(list("The ends exists somewhere beyond meaningful milestones.", "There will be no more messages until then.", "You disgust me."))
 		if(5643)
-			var/obj/item/weapon/reagent_containers/food/drinks/trophy/gold_cup/never_ends = new(get_turf(user))
+			user.client.give_award(/datum/award/achievement/misc/time_waste, user)
+			var/obj/item/reagent_containers/cup/glass/trophy/gold_cup/never_ends = new(get_turf(user))
 			never_ends.name = "Overextending The Joke: First Place"
 			never_ends.desc = "And so we are left alone with our regrets."
 		else
 			y += 2
-
 	speaking = FALSE
 	times_spoken_to++
 
+/obj/structure/speaking_tile/attackby(obj/item/W, mob/user, params)
+	return interact(user)
+
+/obj/structure/speaking_tile/attack_paw(mob/user, list/modifiers)
+	return interact(user)
+
+/obj/structure/speaking_tile/attack_hulk(mob/user)
+	return
+
+/obj/structure/speaking_tile/attack_larva(mob/user, list/modifiers)
+	return interact(user)
+
+/obj/structure/speaking_tile/attack_ai(mob/user)
+	return interact(user)
+
+
+/obj/structure/speaking_tile/attack_animal(mob/user, list/modifiers)
+	return interact(user)
+
 /obj/structure/speaking_tile/proc/SpeakPeace(list/statements)
 	for(var/i in 1 to statements.len)
-		say("<span class='deadsay'>[statements[i]]</span>")
+		say(span_deadsay("[statements[i]]"), sanitize=FALSE)
 		if(i != statements.len)
-			sleep(30)
+			sleep(3 SECONDS)
 
 /obj/item/rupee
 	name = "weird crystal"
@@ -97,25 +121,33 @@
 	icon = 'icons/obj/economy.dmi'
 	icon_state = "rupee"
 	w_class = WEIGHT_CLASS_SMALL
-	materials = list(MAT_GLASS = 500)
+	custom_materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT*5)
 
-/obj/item/rupee/New()
-	var/newcolor = color2hex(pick(10;"green", 5;"blue", 3;"red", 1;"purple"))
+/obj/item/rupee/Initialize(mapload)
+	. = ..()
+	var/newcolor = pick(10;COLOR_GREEN, 5;COLOR_BLUE, 3;COLOR_RED, 1;COLOR_PURPLE)
 	add_atom_colour(newcolor, FIXED_COLOUR_PRIORITY)
-	..()
+	var/static/list/loc_connections = list(
+		COMSIG_ATOM_ENTERED = PROC_REF(on_entered),
+	)
+	AddElement(/datum/element/connect_loc, loc_connections)
 
-/obj/item/rupee/Crossed(mob/M)
-	if(!istype(M))
+/obj/item/rupee/proc/on_entered(datum/source, atom/movable/AM)
+	SIGNAL_HANDLER
+	if(!ismob(AM))
 		return
-	if(M.put_in_hands(src))
-		if(src != M.get_active_held_item())
-			M.swap_hand()
-		equip_to_best_slot(M)
-	..()
+	INVOKE_ASYNC(src, PROC_REF(put_in_crossers_hands), AM)
+
+/obj/item/rupee/proc/put_in_crossers_hands(mob/crosser)
+	if(crosser.put_in_hands(src))
+		if(src != crosser.get_active_held_item())
+			crosser.swap_hand()
+		equip_to_best_slot(crosser)
 
 /obj/item/rupee/equipped(mob/user, slot)
-	playsound(get_turf(loc), 'sound/misc/server-ready.ogg', 50, 1, -1)
+	playsound(get_turf(loc), 'sound/misc/server-ready.ogg', 50, TRUE, -1)
 	..()
 
 /obj/effect/landmark/error
 	name = "error"
+	icon_state = "error_room"

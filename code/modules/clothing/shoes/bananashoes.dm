@@ -4,77 +4,80 @@
 	name = "mk-honk prototype shoes"
 	desc = "Lost prototype of advanced clown tech. Powered by bananium, these shoes leave a trail of chaos in their wake."
 	icon_state = "clown_prototype_off"
-	var/on = 0
-	var/datum/material_container/bananium
 	actions_types = list(/datum/action/item_action/toggle)
+	/// Whether the clown shoes are active (spawning bananas)
+	var/on = FALSE
+	/// If TRUE, we will always have the noslip trait no matter whether they're on or off
+	var/always_noslip = FALSE
+	/// How many materials we consume per banana created
+	var/material_per_banana =SMALL_MATERIAL_AMOUNT
+	/// Typepath of created banana
+	var/banana_type = /obj/item/grown/bananapeel/specialpeel
+	/// Material container for bananium
+	var/datum/component/material_container/bananium
 
-/obj/item/clothing/shoes/clown_shoes/banana_shoes/New()
-	..()
-	bananium = new/datum/material_container(src,list(MAT_BANANIUM),200000)
+/obj/item/clothing/shoes/clown_shoes/banana_shoes/Initialize(mapload)
+	. = ..()
+	AddElement(/datum/element/update_icon_updates_onmob)
+	bananium = AddComponent(
+		/datum/component/material_container, \
+		list(/datum/material/bananium), \
+		100 * SHEET_MATERIAL_AMOUNT, \
+		MATCONTAINER_EXAMINE | MATCONTAINER_ANY_INTENT | MATCONTAINER_SILENT, \
+		allowed_items = /obj/item/stack, \
+	)
+	AddComponent(/datum/component/squeak, list('sound/items/bikehorn.ogg'=1), 75, falloff_exponent = 20)
+	RegisterSignal(src, COMSIG_SHOES_STEP_ACTION, PROC_REF(on_step))
+	if(always_noslip)
+		LAZYOR(clothing_traits, TRAIT_NO_SLIP_WATER)
 
-/obj/item/clothing/shoes/clown_shoes/banana_shoes/step_action()
+/obj/item/clothing/shoes/clown_shoes/banana_shoes/Destroy()
+	bananium = null
+	return ..()
+
+/obj/item/clothing/shoes/clown_shoes/banana_shoes/proc/toggle_clowning_action()
+	on = !on
+	update_appearance()
+	if(always_noslip)
+		return
+
 	if(on)
-		if(footstep > 1)//honks when its on
-			playsound(src, 'sound/items/bikehorn.ogg', 75, 1)
-			footstep = 0
-		else
-			footstep++
-
-		new/obj/item/weapon/grown/bananapeel/specialpeel(get_step(src,turn(usr.dir, 180))) //honk
-		bananium.use_amount_type(100, MAT_BANANIUM)
-		if(bananium.amount(MAT_BANANIUM) < 100)
-			on = !on
-			flags &= ~NOSLIP
-			update_icon()
-			to_chat(loc, "<span class='warning'>You ran out of bananium!</span>")
+		attach_clothing_traits(TRAIT_NO_SLIP_WATER)
 	else
-		..()
+		detach_clothing_traits(TRAIT_NO_SLIP_WATER)
+
+/obj/item/clothing/shoes/clown_shoes/banana_shoes/proc/on_step()
+	SIGNAL_HANDLER
+
+	var/mob/wearer = loc
+	if(!on || !istype(wearer))
+		return
+
+	if(bananium.use_amount_mat(material_per_banana, /datum/material/bananium))
+		new banana_type(get_step(src, REVERSE_DIR(wearer.dir))) //honk
+		return
+
+	toggle_clowning_action()
+	to_chat(wearer, span_warning("You ran out of bananium!"))
 
 /obj/item/clothing/shoes/clown_shoes/banana_shoes/attack_self(mob/user)
 	var/sheet_amount = bananium.retrieve_all()
 	if(sheet_amount)
-		to_chat(user, "<span class='notice'>You retrieve [sheet_amount] sheets of bananium from the prototype shoes.</span>")
+		to_chat(user, span_notice("You retrieve [sheet_amount] sheets of bananium from the prototype shoes."))
 	else
-		to_chat(user, "<span class='notice'>You cannot retrieve any bananium from the prototype shoes.</span>")
-
-/obj/item/clothing/shoes/clown_shoes/banana_shoes/attackby(obj/item/O, mob/user, params)
-	if(!bananium.get_item_material_amount(O))
-		to_chat(user, "<span class='notice'>This item has no bananium!</span>")
-		return
-	if(!user.dropItemToGround(O))
-		to_chat(user, "<span class='notice'>You can't drop [O]!</span>")
-		return
-
-	var/bananium_amount = bananium.insert_item(O)
-	if(bananium_amount)
-		to_chat(user, "<span class='notice'>You insert [O] into the prototype shoes.</span>")
-		qdel(O)
-	else
-		to_chat(user, "<span class='notice'>You are unable to insert more bananium!</span>")
+		to_chat(user, span_warning("You cannot retrieve any bananium from the prototype shoes!"))
 
 /obj/item/clothing/shoes/clown_shoes/banana_shoes/examine(mob/user)
-	..()
-	var/ban_amt = bananium.amount(MAT_BANANIUM)
-	to_chat(user, "<span class='notice'>The shoes are [on ? "enabled" : "disabled"]. There is [ban_amt ? ban_amt : "no"] bananium left.</span>")
+	. = ..()
+	. += span_notice("The shoes are [on ? "enabled" : "disabled"].")
 
 /obj/item/clothing/shoes/clown_shoes/banana_shoes/ui_action_click(mob/user)
-	if(bananium.amount(MAT_BANANIUM))
-		on = !on
-		update_icon()
-		to_chat(user, "<span class='notice'>You [on ? "activate" : "deactivate"] the prototype shoes.</span>")
-		if(on)
-			flags |= NOSLIP
-		else
-			flags &= ~NOSLIP
+	if(bananium.get_material_amount(/datum/material/bananium) >= material_per_banana)
+		toggle_clowning_action()
+		to_chat(user, span_notice("You [on ? "activate" : "deactivate"] the prototype shoes."))
 	else
-		to_chat(user, "<span class='warning'>You need bananium to turn the prototype shoes on!</span>")
+		to_chat(user, span_warning("You need bananium to turn the prototype shoes on!"))
 
-/obj/item/clothing/shoes/clown_shoes/banana_shoes/update_icon()
-	if(on)
-		icon_state = "clown_prototype_on"
-	else
-		icon_state = "clown_prototype_off"
-	usr.update_inv_shoes()
-	for(var/X in actions)
-		var/datum/action/A = X
-		A.UpdateButtonIcon()
+/obj/item/clothing/shoes/clown_shoes/banana_shoes/update_icon_state()
+	icon_state = "clown_prototype_[on ? "on" : "off"]"
+	return ..()

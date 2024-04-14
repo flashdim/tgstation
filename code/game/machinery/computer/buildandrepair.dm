@@ -1,459 +1,361 @@
 /obj/structure/frame/computer
 	name = "computer frame"
+	desc = "A frame for constructing your own computer. Or console. Whichever name you prefer."
 	icon_state = "0"
-	state = 0
+	base_icon_state = ""
+	state = FRAME_COMPUTER_STATE_EMPTY
+	board_type = /obj/item/circuitboard/computer
 
-/obj/structure/frame/computer/attackby(obj/item/P, mob/user, params)
-	add_fingerprint(user)
+/obj/structure/frame/computer/Initialize(mapload)
+	. = ..()
+	AddComponent(/datum/component/simple_rotation)
+	register_context()
+
+/obj/structure/frame/computer/atom_deconstruct(disassembled = TRUE)
+	var/atom/drop_loc = drop_location()
+	if(state == FRAME_COMPUTER_STATE_GLASSED)
+		if(disassembled)
+			new /obj/item/stack/sheet/glass(drop_loc, 2)
+		else
+			new /obj/item/shard(drop_loc)
+			new /obj/item/shard(drop_loc)
+	if(state >= FRAME_COMPUTER_STATE_WIRED)
+		new /obj/item/stack/cable_coil(drop_loc, 5)
+	return ..()
+
+/obj/structure/frame/computer/add_context(atom/source, list/context, obj/item/held_item, mob/user)
+	. = NONE
+	if(isnull(held_item))
+		return
+
 	switch(state)
-		if(0)
-			if(istype(P, /obj/item/weapon/wrench))
-				playsound(src.loc, P.usesound, 50, 1)
-				to_chat(user, "<span class='notice'>You start wrenching the frame into place...</span>")
-				if(do_after(user, 20*P.toolspeed, target = src))
-					to_chat(user, "<span class='notice'>You wrench the frame into place.</span>")
-					anchored = 1
-					state = 1
-				return
-			if(istype(P, /obj/item/weapon/weldingtool))
-				var/obj/item/weapon/weldingtool/WT = P
-				if(!WT.remove_fuel(0, user))
-					if(!WT.isOn())
-						to_chat(user, "<span class='warning'>The welding tool must be on to complete this task!</span>")
-					return
-				playsound(src.loc, P.usesound, 50, 1)
-				to_chat(user, "<span class='notice'>You start deconstructing the frame...</span>")
-				if(do_after(user, 20*P.toolspeed, target = src))
-					if(!src || !WT.isOn()) return
-					to_chat(user, "<span class='notice'>You deconstruct the frame.</span>")
-					var/obj/item/stack/sheet/metal/M = new (loc, 5)
-					M.add_fingerprint(user)
-					qdel(src)
-				return
-		if(1)
-			if(istype(P, /obj/item/weapon/wrench))
-				playsound(src.loc, P.usesound, 50, 1)
-				to_chat(user, "<span class='notice'>You start to unfasten the frame...</span>")
-				if(do_after(user, 20*P.toolspeed, target = src))
-					to_chat(user, "<span class='notice'>You unfasten the frame.</span>")
-					anchored = 0
-					state = 0
-				return
-			if(istype(P, /obj/item/weapon/circuitboard/computer) && !circuit)
-				if(!user.drop_item())
-					return
-				playsound(src.loc, 'sound/items/Deconstruct.ogg', 50, 1)
-				to_chat(user, "<span class='notice'>You place the circuit board inside the frame.</span>")
-				icon_state = "1"
-				circuit = P
-				circuit.add_fingerprint(user)
-				P.loc = null
-				return
+		if(FRAME_COMPUTER_STATE_EMPTY)
+			if(held_item.tool_behaviour == TOOL_WRENCH)
+				context[SCREENTIP_CONTEXT_LMB] = "[anchored ? "Un" : ""]anchor"
+				return CONTEXTUAL_SCREENTIP_SET
+			else if(anchored && istype(held_item, /obj/item/circuitboard/computer))
+				context[SCREENTIP_CONTEXT_LMB] = "Install board"
+				return CONTEXTUAL_SCREENTIP_SET
+			else if(held_item.tool_behaviour == TOOL_WELDER)
+				context[SCREENTIP_CONTEXT_LMB] = "Unweld frame"
+				return CONTEXTUAL_SCREENTIP_SET
+			else if(held_item.tool_behaviour == TOOL_SCREWDRIVER)
+				context[SCREENTIP_CONTEXT_LMB] = "Disassemble frame"
+				return CONTEXTUAL_SCREENTIP_SET
+		if(FRAME_COMPUTER_STATE_BOARD_INSTALLED)
+			if(held_item.tool_behaviour == TOOL_CROWBAR)
+				context[SCREENTIP_CONTEXT_LMB] = "Pry out board"
+				return CONTEXTUAL_SCREENTIP_SET
+			else if(held_item.tool_behaviour == TOOL_SCREWDRIVER)
+				context[SCREENTIP_CONTEXT_LMB] = "Secure board"
+				return CONTEXTUAL_SCREENTIP_SET
+		if(FRAME_COMPUTER_STATE_BOARD_SECURED)
+			if(held_item.tool_behaviour == TOOL_SCREWDRIVER)
+				context[SCREENTIP_CONTEXT_LMB] = "Unsecure board"
+				return CONTEXTUAL_SCREENTIP_SET
+			else if(istype(held_item, /obj/item/stack/cable_coil))
+				context[SCREENTIP_CONTEXT_LMB] = "Install cable"
+				return CONTEXTUAL_SCREENTIP_SET
+		if(FRAME_COMPUTER_STATE_WIRED)
+			if(held_item.tool_behaviour == TOOL_WIRECUTTER)
+				context[SCREENTIP_CONTEXT_LMB] = "Cut out cable"
+				return CONTEXTUAL_SCREENTIP_SET
+			else if(istype(held_item, /obj/item/stack/sheet/glass))
+				context[SCREENTIP_CONTEXT_LMB] = "Install panel"
+				return CONTEXTUAL_SCREENTIP_SET
+		if(FRAME_COMPUTER_STATE_GLASSED)
+			if(held_item.tool_behaviour == TOOL_CROWBAR)
+				context[SCREENTIP_CONTEXT_LMB] = "Pry out glass"
+				return CONTEXTUAL_SCREENTIP_SET
+			else if(held_item.tool_behaviour == TOOL_SCREWDRIVER)
+				context[SCREENTIP_CONTEXT_LMB] = "Complete frame"
+				return CONTEXTUAL_SCREENTIP_SET
 
-			else if(istype(P, /obj/item/weapon/circuitboard) && !circuit)
-				to_chat(user, "<span class='warning'>This frame does not accept circuit boards of this type!</span>")
-				return
-			if(istype(P, /obj/item/weapon/screwdriver) && circuit)
-				playsound(src.loc, P.usesound, 50, 1)
-				to_chat(user, "<span class='notice'>You screw the circuit board into place.</span>")
-				state = 2
-				icon_state = "2"
-				return
-			if(istype(P, /obj/item/weapon/crowbar) && circuit)
-				playsound(src.loc, P.usesound, 50, 1)
-				to_chat(user, "<span class='notice'>You remove the circuit board.</span>")
-				state = 1
-				icon_state = "0"
-				circuit.loc = src.loc
-				circuit.add_fingerprint(user)
-				circuit = null
-				return
-		if(2)
-			if(istype(P, /obj/item/weapon/screwdriver) && circuit)
-				playsound(src.loc, P.usesound, 50, 1)
-				to_chat(user, "<span class='notice'>You unfasten the circuit board.</span>")
-				state = 1
-				icon_state = "1"
-				return
-			if(istype(P, /obj/item/stack/cable_coil))
-				var/obj/item/stack/cable_coil/C = P
-				if(C.get_amount() >= 5)
-					playsound(src.loc, 'sound/items/Deconstruct.ogg', 50, 1)
-					to_chat(user, "<span class='notice'>You start adding cables to the frame...</span>")
-					if(do_after(user, 20*P.toolspeed, target = src))
-						if(C.get_amount() >= 5 && state == 2)
-							C.use(5)
-							to_chat(user, "<span class='notice'>You add cables to the frame.</span>")
-							state = 3
-							icon_state = "3"
-				else
-					to_chat(user, "<span class='warning'>You need five lengths of cable to wire the frame!</span>")
-				return
-		if(3)
-			if(istype(P, /obj/item/weapon/wirecutters))
-				playsound(src.loc, P.usesound, 50, 1)
-				to_chat(user, "<span class='notice'>You remove the cables.</span>")
-				state = 2
-				icon_state = "2"
-				var/obj/item/stack/cable_coil/A = new (loc)
-				A.amount = 5
-				A.add_fingerprint(user)
-				return
+/obj/structure/frame/computer/examine(user)
+	. = ..()
 
-			if(istype(P, /obj/item/stack/sheet/glass))
-				var/obj/item/stack/sheet/glass/G = P
-				if(G.get_amount() < 2)
-					to_chat(user, "<span class='warning'>You need two glass sheets to continue construction!</span>")
-					return
-				else
-					playsound(src.loc, 'sound/items/Deconstruct.ogg', 50, 1)
-					to_chat(user, "<span class='notice'>You start to put in the glass panel...</span>")
-					if(do_after(user, 20, target = src))
-						if(G.get_amount() >= 2 && state == 3)
-							G.use(2)
-							to_chat(user, "<span class='notice'>You put in the glass panel.</span>")
-							state = 4
-							src.icon_state = "4"
-				return
-		if(4)
-			if(istype(P, /obj/item/weapon/crowbar))
-				playsound(src.loc, P.usesound, 50, 1)
-				to_chat(user, "<span class='notice'>You remove the glass panel.</span>")
-				state = 3
-				icon_state = "3"
-				var/obj/item/stack/sheet/glass/G = new (loc, 2)
-				G.add_fingerprint(user)
-				return
-			if(istype(P, /obj/item/weapon/screwdriver))
-				playsound(src.loc, P.usesound, 50, 1)
-				to_chat(user, "<span class='notice'>You connect the monitor.</span>")
-				var/obj/B = new src.circuit.build_path (src.loc, circuit)
-				transfer_fingerprints_to(B)
-				qdel(src)
-				return
-	if(user.a_intent == INTENT_HARM)
-		return ..()
+	switch(state)
+		if(FRAME_STATE_EMPTY)
+			. += span_notice("It can be [EXAMINE_HINT("anchored")] [anchored ? "loose" : "in place"].")
+			if(anchored)
+				. += span_warning("It's missing a circuit board.")
+			else
+				. += span_notice("It can be [EXAMINE_HINT("welded")] or [EXAMINE_HINT("screwed")] apart.")
+		if(FRAME_COMPUTER_STATE_BOARD_INSTALLED)
+			. += span_warning("An [circuit.name] is installed and should be [EXAMINE_HINT("screwed")] in place.")
+			. += span_notice("The circuit board can be [EXAMINE_HINT("pried")] out.")
+		if(FRAME_COMPUTER_STATE_BOARD_SECURED)
+			. += span_warning("Its requires [EXAMINE_HINT("5 cable")] pieces to wire it.")
+			. += span_notice("The circuit board can be [EXAMINE_HINT("screwed")] loose.")
+		if(FRAME_COMPUTER_STATE_WIRED)
+			. += span_notice("The wires can be cut out with [EXAMINE_HINT("wire cutters")].")
+			. += span_warning("Its requires [EXAMINE_HINT("2 glass")] sheets to complete the screen.")
+		if(FRAME_COMPUTER_STATE_GLASSED)
+			. += span_notice("The screen can be [EXAMINE_HINT("pried")] out.")
+			. += span_notice("The moniter can be [EXAMINE_HINT("screwed")] to complete it")
 
+/obj/structure/frame/computer/circuit_added(obj/item/circuitboard/added)
+	state = FRAME_COMPUTER_STATE_BOARD_INSTALLED
+	update_appearance(UPDATE_ICON_STATE)
 
-/obj/structure/frame/computer/deconstruct(disassembled = TRUE)
-	if(!(flags & NODECONSTRUCT))
-		if(state == 4)
-			new /obj/item/weapon/shard(loc)
-			new /obj/item/weapon/shard(loc)
-		if(state >= 3)
-			new /obj/item/stack/cable_coil(loc , 5)
-	..()
+/obj/structure/frame/computer/circuit_removed(obj/item/circuitboard/removed)
+	state = FRAME_COMPUTER_STATE_EMPTY
+	update_appearance(UPDATE_ICON_STATE)
 
+/obj/structure/frame/computer/install_board(mob/living/user, obj/item/circuitboard/computer/board, by_hand)
+	if(state != FRAME_COMPUTER_STATE_EMPTY)
+		balloon_alert(user, "circuit already installed!")
+		return FALSE
+	if(!anchored && istype(board))
+		balloon_alert(user, "frame must be anchored!")
+		return FALSE
+	. = ..()
+	if(. && !by_hand) // Installing via RPED auto-secures it
+		state = FRAME_COMPUTER_STATE_BOARD_SECURED
+		update_appearance(UPDATE_ICON_STATE)
+	return .
 
-/obj/item/weapon/circuitboard
-	name = "circuit board"
-	icon = 'icons/obj/module.dmi'
-	icon_state = "id_mod"
-	item_state = "electronic"
-	origin_tech = "programming=2"
-	materials = list(MAT_GLASS=1000)
-	w_class = WEIGHT_CLASS_SMALL
-	var/build_path = null
+/obj/structure/frame/computer/install_parts_from_part_replacer(mob/living/user, obj/item/storage/part_replacer/replacer, no_sound = FALSE)
+	switch(state)
+		if(FRAME_COMPUTER_STATE_BOARD_SECURED)
+			var/obj/item/stack/cable_coil/cable = locate() in replacer
+			if(isnull(cable))
+				return FALSE
 
-/obj/item/weapon/circuitboard/computer/turbine_computer
-	name = "Turbine Computer (Computer Board)"
-	build_path = /obj/machinery/computer/turbine_computer
-	origin_tech = "programming=4;engineering=4;powerstorage=4"
-/obj/item/weapon/circuitboard/computer/telesci_console
-	name = "Telescience Console (Computer Board)"
-	build_path = /obj/machinery/computer/telescience
-	origin_tech = "programming=3;bluespace=3;plasmatech=4"
-/obj/item/weapon/circuitboard/computer/message_monitor
-	name = "Message Monitor (Computer Board)"
-	build_path = /obj/machinery/computer/message_monitor
-	origin_tech = "programming=2"
-/obj/item/weapon/circuitboard/computer/security
-	name = "Security Cameras (Computer Board)"
-	build_path = /obj/machinery/computer/security
-	origin_tech = "programming=2;combat=2"
-/obj/item/weapon/circuitboard/computer/xenobiology
-	name = "circuit board (Xenobiology Console)"
-	build_path = /obj/machinery/computer/camera_advanced/xenobio
-	origin_tech = "programming=3;bio=3"
-/obj/item/weapon/circuitboard/computer/base_construction
-	name = "circuit board (Aux Mining Base Construction Console)"
-	build_path = /obj/machinery/computer/camera_advanced/base_construction
-	origin_tech = "programming=3;engineering=3"
-/obj/item/weapon/circuitboard/computer/aiupload
-	name = "AI Upload (Computer Board)"
-	build_path = /obj/machinery/computer/upload/ai
-	origin_tech = "programming=4;engineering=4"
-/obj/item/weapon/circuitboard/computer/borgupload
-	name = "Cyborg Upload (Computer Board)"
-	build_path = /obj/machinery/computer/upload/borg
-	origin_tech = "programming=4;engineering=4"
-/obj/item/weapon/circuitboard/computer/med_data
-	name = "Medical Records Console (Computer Board)"
-	build_path = /obj/machinery/computer/med_data
-	origin_tech = "programming=2;biotech=2"
-/obj/item/weapon/circuitboard/computer/pandemic
-	name = "PanD.E.M.I.C. 2200 (Computer Board)"
-	build_path = /obj/machinery/computer/pandemic
-	origin_tech = "programming=2;biotech=2"
-/obj/item/weapon/circuitboard/computer/scan_consolenew
-	name = "DNA Machine (Computer Board)"
-	build_path = /obj/machinery/computer/scan_consolenew
-	origin_tech = "programming=2;biotech=2"
-/obj/item/weapon/circuitboard/computer/communications
-	name = "Communications (Computer Board)"
-	build_path = /obj/machinery/computer/communications
-	origin_tech = "programming=3;magnets=3"
-	var/lastTimeUsed = 0
+			if(add_cabling(user, cable, time = 0))
+				if(!no_sound)
+					replacer.play_rped_sound()
+					if(replacer.works_from_distance)
+						user.Beam(src, icon_state = "rped_upgrade", time = 0.5 SECONDS)
+					no_sound = TRUE
+				return install_parts_from_part_replacer(user, replacer, no_sound = no_sound)  // Recursive call to handle the next part
 
-/obj/item/weapon/circuitboard/computer/card
-	name = "ID Console (Computer Board)"
-	build_path = /obj/machinery/computer/card
-	origin_tech = "programming=3"
-/obj/item/weapon/circuitboard/computer/card/centcom
-	name = "Centcom ID Console (Computer Board)"
-	build_path = /obj/machinery/computer/card/centcom
+			return FALSE
 
-/obj/item/weapon/circuitboard/computer/card/minor
-	name = "Department Management Console (Computer Board)"
-	build_path = /obj/machinery/computer/card/minor
-	var/target_dept = 1
-	var/list/dept_list = list("General","Security","Medical","Science","Engineering")
+		if(FRAME_COMPUTER_STATE_WIRED)
+			var/obj/item/stack/sheet/glass/glass_sheets = locate() in replacer
+			if(isnull(glass_sheets))
+				return FALSE
 
-/obj/item/weapon/circuitboard/computer/card/minor/attackby(obj/item/I, mob/user, params)
-	if(istype(I, /obj/item/weapon/screwdriver))
-		target_dept = (target_dept == dept_list.len) ? 1 : (target_dept + 1)
-		to_chat(user, "<span class='notice'>You set the board to \"[dept_list[target_dept]]\".</span>")
-	else
-		return ..()
+			if(add_glass(user, glass_sheets, time = 0))
+				if(!no_sound)
+					replacer.play_rped_sound()
+					if(replacer.works_from_distance)
+						user.Beam(src, icon_state = "rped_upgrade", time = 0.5 SECONDS)
+				return TRUE
 
-/obj/item/weapon/circuitboard/computer/card/minor/examine(user)
-	..()
-	to_chat(user, "Currently set to \"[dept_list[target_dept]]\".")
+			return FALSE
 
-//obj/item/weapon/circuitboard/computer/shield
-//	name = "Shield Control (Computer Board)"
-//	build_path = /obj/machinery/computer/stationshield
-/obj/item/weapon/circuitboard/computer/teleporter
-	name = "Teleporter (Computer Board)"
-	build_path = /obj/machinery/computer/teleporter
-	origin_tech = "programming=3;bluespace=3;plasmatech=3"
-/obj/item/weapon/circuitboard/computer/secure_data
-	name = "Security Records Console (Computer Board)"
-	build_path = /obj/machinery/computer/secure_data
-	origin_tech = "programming=2;combat=2"
-/obj/item/weapon/circuitboard/computer/stationalert
-	name = "Station Alerts (Computer Board)"
-	build_path = /obj/machinery/computer/station_alert
-/*/obj/item/weapon/circuitboard/computer/atmospheresiphonswitch
-	name = "Atmosphere siphon control (Computer Board)"
-	build_path = /obj/machinery/computer/atmosphere/siphonswitch*/
-/obj/item/weapon/circuitboard/computer/atmos_control
-	name = "Atmospheric Monitor (Computer Board)"
-	build_path = /obj/machinery/computer/atmos_control
-/obj/item/weapon/circuitboard/computer/atmos_control/tank
-	name = "Tank Control (Computer Board)"
-	build_path = /obj/machinery/computer/atmos_control/tank
-	origin_tech = "programming=2;engineering=3;materials=2"
-/obj/item/weapon/circuitboard/computer/atmos_alert
-	name = "Atmospheric Alert (Computer Board)"
-	build_path = /obj/machinery/computer/atmos_alert
-/obj/item/weapon/circuitboard/computer/pod
-	name = "Massdriver control (Computer Board)"
-	build_path = /obj/machinery/computer/pod
-/obj/item/weapon/circuitboard/computer/robotics
-	name = "Robotics Control (Computer Board)"
-	build_path = /obj/machinery/computer/robotics
-	origin_tech = "programming=3"
-/obj/item/weapon/circuitboard/computer/cloning
-	name = "Cloning (Computer Board)"
-	build_path = /obj/machinery/computer/cloning
-	origin_tech = "programming=2;biotech=2"
-/obj/item/weapon/circuitboard/computer/arcade/battle
-	name = "Arcade Battle (Computer Board)"
-	build_path = /obj/machinery/computer/arcade/battle
-	origin_tech = "programming=1"
-/obj/item/weapon/circuitboard/computer/arcade/orion_trail
-	name = "Orion Trail (Computer Board)"
-	build_path = /obj/machinery/computer/arcade/orion_trail
-	origin_tech = "programming=1"
-/obj/item/weapon/circuitboard/computer/turbine_control
-	name = "Turbine control (Computer Board)"
-	build_path = /obj/machinery/computer/turbine_computer
-/obj/item/weapon/circuitboard/computer/solar_control
-	name = "Solar Control (Computer Board)"  //name fixed 250810
-	build_path = /obj/machinery/power/solar_control
-	origin_tech = "programming=2;powerstorage=2"
-/obj/item/weapon/circuitboard/computer/powermonitor
-	name = "Power Monitor (Computer Board)"  //name fixed 250810
-	build_path = /obj/machinery/computer/monitor
-	origin_tech = "programming=2;powerstorage=2"
-/obj/item/weapon/circuitboard/computer/olddoor
-	name = "DoorMex (Computer Board)"
-	build_path = /obj/machinery/computer/pod/old
-/obj/item/weapon/circuitboard/computer/syndicatedoor
-	name = "ProComp Executive (Computer Board)"
-	build_path = /obj/machinery/computer/pod/old/syndicate
-/obj/item/weapon/circuitboard/computer/swfdoor
-	name = "Magix (Computer Board)"
-	build_path = /obj/machinery/computer/pod/old/swf
-/obj/item/weapon/circuitboard/computer/prisoner
-	name = "Prisoner Management Console (Computer Board)"
-	build_path = /obj/machinery/computer/prisoner
-/obj/item/weapon/circuitboard/computer/gulag_teleporter_console
-	name = "Labor Camp teleporter console (Computer Board)"
-	build_path = /obj/machinery/computer/gulag_teleporter_computer
+/obj/structure/frame/computer/item_interaction(mob/living/user, obj/item/tool, list/modifiers, is_right_clicking)
+	. = ..()
+	if(. & ITEM_INTERACT_ANY_BLOCKER)
+		return .
 
-/obj/item/weapon/circuitboard/computer/rdconsole
-	name = "RD Console (Computer Board)"
-	build_path = /obj/machinery/computer/rdconsole/core
+	switch(state)
+		if(FRAME_COMPUTER_STATE_EMPTY)
+			if(istype(tool, /obj/item/storage/part_replacer))
+				return install_circuit_from_part_replacer(user, tool) ? ITEM_INTERACT_SUCCESS : ITEM_INTERACT_BLOCKING
 
-/obj/item/weapon/circuitboard/computer/rdconsole/attackby(obj/item/I, mob/user, params)
-	if(istype(I,/obj/item/weapon/screwdriver))
-		if(build_path == /obj/machinery/computer/rdconsole/core)
-			name = "RD Console - Robotics (Computer Board)"
-			build_path = /obj/machinery/computer/rdconsole/robotics
-			to_chat(user, "<span class='notice'>Access protocols successfully updated.</span>")
-		else
-			name = "RD Console (Computer Board)"
-			build_path = /obj/machinery/computer/rdconsole/core
-			to_chat(user, "<span class='notice'>Defaulting access protocols.</span>")
-	else
-		return ..()
+		if(FRAME_COMPUTER_STATE_BOARD_SECURED)
+			if(istype(tool, /obj/item/stack/cable_coil))
+				return add_cabling(user, tool) ? ITEM_INTERACT_SUCCESS : ITEM_INTERACT_BLOCKING
 
-/obj/item/weapon/circuitboard/computer/mecha_control
-	name = "Exosuit Control Console (Computer Board)"
-	build_path = /obj/machinery/computer/mecha
-/obj/item/weapon/circuitboard/computer/rdservercontrol
-	name = "R&D Server Control (Computer Board)"
-	build_path = /obj/machinery/computer/rdservercontrol
-/obj/item/weapon/circuitboard/computer/crew
-	name = "Crew Monitoring Console (Computer Board)"
-	build_path = /obj/machinery/computer/crew
-	origin_tech = "programming=2;biotech=2"
-/obj/item/weapon/circuitboard/computer/mech_bay_power_console
-	name = "Mech Bay Power Control Console (Computer Board)"
-	build_path = /obj/machinery/computer/mech_bay_power_console
-	origin_tech = "programming=3;powerstorage=3"
+			if(istype(tool, /obj/item/storage/part_replacer))
+				return install_parts_from_part_replacer(user, tool) ? ITEM_INTERACT_SUCCESS : ITEM_INTERACT_BLOCKING
 
-/obj/item/weapon/circuitboard/computer/cargo
-	name = "Supply Console (Computer Board)"
-	build_path = /obj/machinery/computer/cargo
-	origin_tech = "programming=3"
-	var/contraband = 0
-	var/emagged = 0
+		if(FRAME_COMPUTER_STATE_WIRED)
+			if(istype(tool, /obj/item/stack/sheet/glass))
+				return add_glass(user, tool) ? ITEM_INTERACT_SUCCESS : ITEM_INTERACT_BLOCKING
 
-/obj/item/weapon/circuitboard/computer/cargo/attackby(obj/item/I, mob/user, params)
-	if(istype(I,/obj/item/device/multitool))
-		if(!emagged)
-			contraband = !contraband
-			to_chat(user, "<span class='notice'>Receiver spectrum set to [contraband ? "Broad" : "Standard"].</span>")
-		else
-			to_chat(user, "<span class='notice'>The spectrum chip is unresponsive.</span>")
-	else if(istype(I,/obj/item/weapon/card/emag))
-		if(!emagged)
-			contraband = TRUE
-			emagged = TRUE
-			to_chat(user, "<span class='notice'>You adjust [src]'s routing and receiver spectrum, unlocking special supplies and contraband.</span>")
-	else
-		return ..()
+			if(istype(tool, /obj/item/storage/part_replacer))
+				return install_parts_from_part_replacer(user, tool) ? ITEM_INTERACT_SUCCESS : ITEM_INTERACT_BLOCKING
 
+/obj/structure/frame/computer/screwdriver_act(mob/living/user, obj/item/tool)
+	. = ..()
+	if(. & ITEM_INTERACT_ANY_BLOCKER)
+		return .
 
-/obj/item/weapon/circuitboard/computer/cargo/request
-	name = "Supply Request Console (Computer Board)"
-	build_path = /obj/machinery/computer/cargo/request
-/obj/item/weapon/circuitboard/computer/stockexchange
-	name = "circuit board (Stock Exchange Console)"
-	build_path = /obj/machinery/computer/stockexchange
-	origin_tech = "programming=3"
+	switch(state)
+		if(FRAME_COMPUTER_STATE_BOARD_INSTALLED)
+			tool.play_tool_sound(src)
+			balloon_alert(user, "circuit secured")
+			state = FRAME_COMPUTER_STATE_BOARD_SECURED
+			update_appearance(UPDATE_ICON_STATE)
+			return ITEM_INTERACT_SUCCESS
 
-/obj/item/weapon/circuitboard/computer/operating
-	name = "Operating Computer (Computer Board)"
-	build_path = /obj/machinery/computer/operating
-	origin_tech = "programming=2;biotech=3"
-/obj/item/weapon/circuitboard/computer/mining
-	name = "Outpost Status Display (Computer Board)"
-	build_path = /obj/machinery/computer/security/mining
-/obj/item/weapon/circuitboard/computer/comm_monitor
-	name = "Telecommunications Monitor (Computer Board)"
-	build_path = /obj/machinery/computer/telecomms/monitor
-	origin_tech = "programming=3;magnets=3;bluespace=2"
-/obj/item/weapon/circuitboard/computer/comm_server
-	name = "Telecommunications Server Monitor (Computer Board)"
-	build_path = /obj/machinery/computer/telecomms/server
-	origin_tech = "programming=3;magnets=3;bluespace=2"
+		if(FRAME_COMPUTER_STATE_BOARD_SECURED)
+			tool.play_tool_sound(src)
+			balloon_alert(user, "circuit unsecured")
+			state = FRAME_COMPUTER_STATE_BOARD_INSTALLED
+			update_appearance(UPDATE_ICON_STATE)
+			return ITEM_INTERACT_SUCCESS
 
-/obj/item/weapon/circuitboard/computer/shuttle
-	name = "Shuttle (Computer Board)"
-	build_path = /obj/machinery/computer/shuttle
-	var/shuttleId
-	var/possible_destinations = ""
+		if(FRAME_COMPUTER_STATE_WIRED)
+			if(!user.combat_mode)
+				balloon_alert(user, "no glass!")
+				return ITEM_INTERACT_BLOCKING
 
-/obj/item/weapon/circuitboard/computer/shuttle/attackby(obj/item/I, mob/user, params)
-	if(istype(I, /obj/item/device/multitool))
-		var/chosen_id = round(input(usr, "Choose an ID number (-1 for reset):", "Input an Integer", null) as num|null)
-		if(chosen_id >= 0)
-			shuttleId = chosen_id
-		else
-			shuttleId = initial(shuttleId)
-	else
-		return ..()
+		if(FRAME_COMPUTER_STATE_GLASSED)
+			if(finalize_construction(user, tool))
+				return ITEM_INTERACT_SUCCESS
 
-/obj/item/weapon/circuitboard/computer/labor_shuttle
-	name = "Labor Shuttle (Computer Board)"
-	build_path = /obj/machinery/computer/shuttle/labor
-/obj/item/weapon/circuitboard/computer/labor_shuttle/one_way
-	name = "Prisoner Shuttle Console (Computer Board)"
-	build_path = /obj/machinery/computer/shuttle/labor/one_way
-/obj/item/weapon/circuitboard/computer/ferry
-	name = "Transport Ferry (Computer Board)"
-	build_path = /obj/machinery/computer/shuttle/ferry
-/obj/item/weapon/circuitboard/computer/ferry/request
-	name = "Transport Ferry Console (Computer Board)"
-	build_path = /obj/machinery/computer/shuttle/ferry/request
-/obj/item/weapon/circuitboard/computer/mining_shuttle
-	name = "Mining Shuttle (Computer Board)"
-	build_path = /obj/machinery/computer/shuttle/mining
-/obj/item/weapon/circuitboard/computer/white_ship
-	name = "White Ship (Computer Board)"
-	build_path = /obj/machinery/computer/shuttle/white_ship
-/obj/item/weapon/circuitboard/computer/auxillary_base
-	name = "Auxillary Base Management Console (Computer Board)"
-	build_path = /obj/machinery/computer/auxillary_base
-/obj/item/weapon/circuitboard/computer/holodeck// Not going to let people get this, but it's just here for future
-	name = "Holodeck Control (Computer Board)"
-	build_path = /obj/machinery/computer/holodeck
-	origin_tech = "programming=4"
-/obj/item/weapon/circuitboard/computer/aifixer
-	name = "AI Integrity Restorer (Computer Board)"
-	build_path = /obj/machinery/computer/aifixer
-	origin_tech = "programming=2;biotech=2"
-/*/obj/item/weapon/circuitboard/computer/prison_shuttle
-	name = "Prison Shuttle (Computer Board)"
-	build_path = /obj/machinery/computer/prison_shuttle*/
-/obj/item/weapon/circuitboard/computer/slot_machine
-	name = "Slot Machine (Computer Board)"
-	build_path = /obj/machinery/computer/slot_machine
-	origin_tech = "programming=1"
+			balloon_alert(user, "missing components!")
+			return ITEM_INTERACT_BLOCKING
 
-/obj/item/weapon/circuitboard/computer/libraryconsole
-	name = "Library Visitor Console (Computer Board)"
-	build_path = /obj/machinery/computer/libraryconsole
-	origin_tech = "programming=1"
+/obj/structure/frame/computer/crowbar_act(mob/living/user, obj/item/tool)
+	if(user.combat_mode)
+		return NONE
 
-/obj/item/weapon/circuitboard/computer/libraryconsole/attackby(obj/item/I, mob/user, params)
-	if(istype(I,/obj/item/weapon/screwdriver))
-		if(build_path == /obj/machinery/computer/libraryconsole/bookmanagement)
-			name = "Library Visitor Console (Computer Board)"
-			build_path = /obj/machinery/computer/libraryconsole
-			to_chat(user, "<span class='notice'>Defaulting access protocols.</span>")
-		else
-			name = "Book Inventory Management Console (Computer Board)"
-			build_path = /obj/machinery/computer/libraryconsole/bookmanagement
-			to_chat(user, "<span class='notice'>Access protocols successfully updated.</span>")
-	else
-		return ..()
+	switch(state)
+		if(FRAME_COMPUTER_STATE_BOARD_INSTALLED)
+			tool.play_tool_sound(src)
+			balloon_alert(user, "circuit removed")
+			circuit.add_fingerprint(user)
+			circuit.forceMove(drop_location())
+			return ITEM_INTERACT_SUCCESS
 
-/obj/item/weapon/circuitboard/computer/apc_control
-	name = "\improper Power Flow Control Console (Computer Board)"
-	build_path = /obj/machinery/computer/apc_control
-	origin_tech = "programming=3;engineering=3;powerstorage=2"
+		if(FRAME_COMPUTER_STATE_BOARD_SECURED)
+			balloon_alert(user, "unsecure the circuit!")
+			return ITEM_INTERACT_BLOCKING
+
+		if(FRAME_COMPUTER_STATE_WIRED)
+			balloon_alert(user, "remove the wiring!")
+			return ITEM_INTERACT_BLOCKING
+
+		if(FRAME_COMPUTER_STATE_GLASSED)
+			tool.play_tool_sound(src)
+			balloon_alert(user, "glass removed")
+			state = FRAME_COMPUTER_STATE_WIRED
+			update_appearance(UPDATE_ICON_STATE)
+			var/obj/item/stack/sheet/glass/dropped_glass = new (drop_location(), 2)
+			if (!QDELETED(dropped_glass))
+				dropped_glass.add_fingerprint(user)
+			return ITEM_INTERACT_SUCCESS
+
+/obj/structure/frame/computer/wirecutter_act(mob/living/user, obj/item/tool)
+	if(user.combat_mode)
+		return NONE
+
+	if(state != FRAME_COMPUTER_STATE_WIRED)
+		return ITEM_INTERACT_BLOCKING
+
+	tool.play_tool_sound(src)
+	balloon_alert(user, "cables removed")
+	state = FRAME_COMPUTER_STATE_BOARD_SECURED
+	update_appearance(UPDATE_ICON_STATE)
+
+	var/obj/item/stack/cable_coil/dropped_cables = new (drop_location(), 5)
+	if (!QDELETED(dropped_cables))
+		dropped_cables.add_fingerprint(user)
+	return ITEM_INTERACT_SUCCESS
+
+/**
+ * Adds cable to the computer to wire it
+ * Arguments
+ *
+ * * mob/living/user - the player who is adding the cable
+ * * obj/item/stack/cable_coil/cable - the cable we are trying to add
+ * * time - time taken to complete the operation
+ */
+/obj/structure/frame/computer/proc/add_cabling(mob/living/user, obj/item/stack/cable_coil/cable, time = 2 SECONDS)
+	PRIVATE_PROC(TRUE)
+
+	if(state != FRAME_COMPUTER_STATE_BOARD_SECURED)
+		return FALSE
+	if(!cable.tool_start_check(user, amount = 5))
+		return FALSE
+	if(time > 0)
+		balloon_alert(user, "adding cables...")
+	if(!cable.use_tool(src, user, time, volume = 50, amount = 5) || state != FRAME_COMPUTER_STATE_BOARD_SECURED)
+		return FALSE
+
+	state = FRAME_COMPUTER_STATE_WIRED
+	update_appearance(UPDATE_ICON_STATE)
+	return TRUE
+
+/**
+ * Adds glass sheets to the computer to complete the screen
+ * Arguments
+ *
+ * * mob/living/user - the player who is adding the glass
+ * * obj/item/stack/sheet/glass/glass - the glass we are trying to add
+ * * time - time taken to complete the operation
+ */
+/obj/structure/frame/computer/proc/add_glass(mob/living/user, obj/item/stack/sheet/glass/glass, time = 2 SECONDS)
+	PRIVATE_PROC(TRUE)
+
+	if(state != FRAME_COMPUTER_STATE_WIRED)
+		return FALSE
+	if(!glass.tool_start_check(user, amount = 2))
+		return FALSE
+	if(time > 0)
+		playsound(src, 'sound/items/deconstruct.ogg', 50, TRUE)
+		balloon_alert(user, "adding glass...")
+	if(!glass.use_tool(src, user, time, amount = 2) || state != FRAME_COMPUTER_STATE_WIRED)
+		return FALSE
+
+	state = FRAME_COMPUTER_STATE_GLASSED
+	update_appearance(UPDATE_ICON_STATE)
+	return TRUE
+
+/obj/structure/frame/computer/finalize_construction(mob/living/user, obj/item/tool)
+	tool.play_tool_sound(src)
+	var/obj/machinery/new_machine = new circuit.build_path(loc)
+	new_machine.balloon_alert(user, "monitor connected")
+	new_machine.setDir(dir)
+	transfer_fingerprints_to(new_machine)
+
+	if(istype(new_machine, /obj/machinery/computer))
+		var/obj/machinery/computer/new_computer = new_machine
+
+		new_machine.clear_components()
+
+		// Set anchor state and move the frame's parts over to the new machine.
+		// Then refresh parts and call on_construction().
+		new_computer.set_anchored(anchored)
+		new_computer.component_parts = list(circuit)
+		new_computer.circuit = circuit
+
+		circuit.forceMove(new_computer)
+
+		for(var/atom/movable/movable_part in src)
+			movable_part.forceMove(new_computer)
+			new_computer.component_parts += movable_part
+
+		new_computer.RefreshParts()
+		new_computer.on_construction(user)
+
+	qdel(src)
+	return TRUE
+
+/// Helpers for rcd
+/obj/structure/frame/computer/rcd
+	icon = 'icons/hud/radial.dmi'
+	icon_state = "cnorth"
+	anchored = TRUE
+
+/obj/structure/frame/computer/rcd/Initialize(mapload)
+	// yeah...
+	name = "computer frame"
+	icon = 'icons/obj/devices/stock_parts.dmi'
+	return ..()
+
+/obj/structure/frame/computer/rcd/north
+	dir = NORTH
+	name = "Computer North"
+	icon_state = "cnorth"
+
+/obj/structure/frame/computer/rcd/south
+	dir = SOUTH
+	name = "Computer South"
+	icon_state = "csouth"
+
+/obj/structure/frame/computer/rcd/east
+	dir = EAST
+	name = "Computer East"
+	icon_state = "ceast"
+
+/obj/structure/frame/computer/rcd/west
+	dir = WEST
+	name = "Computer West"
+	icon_state = "cwest"

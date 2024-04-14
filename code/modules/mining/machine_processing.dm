@@ -1,190 +1,129 @@
+/// Smelt amount per second
+#define SMELT_AMOUNT 5
+
 /**********************Mineral processing unit console**************************/
+
+/obj/machinery/mineral
+	processing_flags = START_PROCESSING_MANUALLY
+	subsystem_type = /datum/controller/subsystem/processing/fastprocess
+	/// The current direction of `input_turf`, in relation to the machine.
+	var/input_dir = NORTH
+	/// The current direction, in relation to the machine, that items will be output to.
+	var/output_dir = SOUTH
+	/// The turf the machines listens to for items to pick up. Calls the `pickup_item()` proc.
+	var/turf/input_turf = null
+	/// Determines if this machine needs to pick up items. Used to avoid registering signals to `/mineral` machines that don't pickup items.
+	var/needs_item_input = FALSE
+
+/obj/machinery/mineral/Initialize(mapload)
+	. = ..()
+	if(needs_item_input && anchored)
+		register_input_turf()
+
+/// Gets the turf in the `input_dir` direction adjacent to the machine, and registers signals for ATOM_ENTERED and ATOM_CREATED. Calls the `pickup_item()` proc when it receives these signals.
+/obj/machinery/mineral/proc/register_input_turf()
+	input_turf = get_step(src, input_dir)
+	if(input_turf) // make sure there is actually a turf
+		RegisterSignals(input_turf, list(COMSIG_ATOM_AFTER_SUCCESSFUL_INITIALIZED_ON, COMSIG_ATOM_ENTERED), PROC_REF(pickup_item))
+
+/// Unregisters signals that are registered the machine's input turf, if it has one.
+/obj/machinery/mineral/proc/unregister_input_turf()
+	if(input_turf)
+		UnregisterSignal(input_turf, list(COMSIG_ATOM_ENTERED, COMSIG_ATOM_AFTER_SUCCESSFUL_INITIALIZED_ON))
+
+/obj/machinery/mineral/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
+	. = ..()
+	if(!needs_item_input || !anchored)
+		return
+	unregister_input_turf()
+	register_input_turf()
+
+/obj/machinery/mineral/shuttleRotate(rotation, params)
+	. = ..()
+	input_dir = angle2dir(rotation + dir2angle(input_dir))
+	output_dir = angle2dir(rotation + dir2angle(output_dir))
+
+/**
+	Base proc for all `/mineral` subtype machines to use. Place your item pickup behavior in this proc when you override it for your specific machine.
+
+	Called when the COMSIG_ATOM_ENTERED and COMSIG_ATOM_AFTER_SUCCESSFUL_INITIALIZED_ON signals are sent.
+
+	Arguments:
+	* source - the turf that is listening for the signals.
+	* target - the atom that just moved onto the `source` turf.
+	* oldLoc - the old location that `target` was at before moving onto `source`.
+*/
+/obj/machinery/mineral/proc/pickup_item(datum/source, atom/movable/target, atom/old_loc, list/atom/old_locs)
+	SIGNAL_HANDLER
+
+	return
+
+/// Generic unloading proc. Takes an atom as an argument and forceMove's it to the turf adjacent to this machine in the `output_dir` direction.
+/obj/machinery/mineral/proc/unload_mineral(atom/movable/unloaded_mineral)
+	unloaded_mineral.forceMove(drop_location())
+	var/turf/unload_turf = get_step(src, output_dir)
+	if(unload_turf)
+		unloaded_mineral.forceMove(unload_turf)
 
 /obj/machinery/mineral/processing_unit_console
 	name = "production machine console"
 	icon = 'icons/obj/machines/mining_machines.dmi'
 	icon_state = "console"
-	density = 1
-	anchored = 1
-	var/obj/machinery/mineral/processing_unit/machine = null
-	var/machinedir = EAST
-	speed_process = 1
+	density = TRUE
+	interaction_flags_machine = INTERACT_MACHINE_WIRES_IF_OPEN|INTERACT_MACHINE_ALLOW_SILICON|INTERACT_MACHINE_OPEN_SILICON
+	/// Connected ore processing machine.
+	var/obj/machinery/mineral/processing_unit/processing_machine
 
-/obj/machinery/mineral/processing_unit_console/New()
-	..()
-	spawn(7)
-		src.machine = locate(/obj/machinery/mineral/processing_unit, get_step(src, machinedir))
-		if (machine)
-			machine.CONSOLE = src
-		else
-			qdel(src)
-
-/obj/machinery/mineral/processing_unit_console/attack_hand(mob/user)
-
-	var/dat = "<b>Smelter control console</b><br><br>"
-	//iron
-	if(machine.ore_iron || machine.ore_glass || machine.ore_plasma || machine.ore_uranium || machine.ore_gold || machine.ore_silver || machine.ore_diamond || machine.ore_clown || machine.ore_adamantine)
-		if(machine.ore_iron)
-			if (machine.selected_iron==1)
-				dat += "<A href='?src=\ref[src];sel_iron=no'><font color='green'>Smelting</font></A> "
-			else
-				dat += "<A href='?src=\ref[src];sel_iron=yes'><font color='red'>Not smelting</font></A> "
-			dat += "Iron: [machine.ore_iron]<br>"
-		else
-			machine.selected_iron = 0
-
-		//sand - glass
-		if(machine.ore_glass)
-			if (machine.selected_glass==1)
-				dat += "<A href='?src=\ref[src];sel_glass=no'><font color='green'>Smelting</font></A> "
-			else
-				dat += "<A href='?src=\ref[src];sel_glass=yes'><font color='red'>Not smelting</font></A> "
-			dat += "Sand: [machine.ore_glass]<br>"
-		else
-			machine.selected_glass = 0
-
-		//plasma
-		if(machine.ore_plasma)
-			if (machine.selected_plasma==1)
-				dat += "<A href='?src=\ref[src];sel_plasma=no'><font color='green'>Smelting</font></A> "
-			else
-				dat += "<A href='?src=\ref[src];sel_plasma=yes'><font color='red'>Not smelting</font></A> "
-			dat += "Plasma: [machine.ore_plasma]<br>"
-		else
-			machine.selected_plasma = 0
-
-		//uranium
-		if(machine.ore_uranium)
-			if (machine.selected_uranium==1)
-				dat += "<A href='?src=\ref[src];sel_uranium=no'><font color='green'>Smelting</font></A> "
-			else
-				dat += "<A href='?src=\ref[src];sel_uranium=yes'><font color='red'>Not smelting</font></A> "
-			dat += "Uranium: [machine.ore_uranium]<br>"
-		else
-			machine.selected_uranium = 0
-
-		//gold
-		if(machine.ore_gold)
-			if (machine.selected_gold==1)
-				dat += "<A href='?src=\ref[src];sel_gold=no'><font color='green'>Smelting</font></A> "
-			else
-				dat += "<A href='?src=\ref[src];sel_gold=yes'><font color='red'>Not smelting</font></A> "
-			dat += "Gold: [machine.ore_gold]<br>"
-		else
-			machine.selected_gold = 0
-
-		//silver
-		if(machine.ore_silver)
-			if (machine.selected_silver==1)
-				dat += "<A href='?src=\ref[src];sel_silver=no'><font color='green'>Smelting</font></A> "
-			else
-				dat += "<A href='?src=\ref[src];sel_silver=yes'><font color='red'>Not smelting</font></A> "
-			dat += "Silver: [machine.ore_silver]<br>"
-		else
-			machine.selected_silver = 0
-
-		//diamond
-		if(machine.ore_diamond)
-			if (machine.selected_diamond==1)
-				dat += "<A href='?src=\ref[src];sel_diamond=no'><font color='green'>Smelting</font></A> "
-			else
-				dat += "<A href='?src=\ref[src];sel_diamond=yes'><font color='red'>Not smelting</font></A> "
-			dat += "Diamond: [machine.ore_diamond]<br>"
-		else
-			machine.selected_diamond = 0
-
-		//bananium
-		if(machine.ore_clown)
-			if (machine.selected_clown==1)
-				dat += "<A href='?src=\ref[src];sel_clown=no'><font color='green'>Smelting</font></A> "
-			else
-				dat += "<A href='?src=\ref[src];sel_clown=yes'><font color='red'>Not smelting</font></A> "
-			dat += "Bananium: [machine.ore_clown]<br>"
-		else
-			machine.selected_clown = 0
-
-		//titanium
-		if(machine.ore_titanium)
-			if (machine.selected_titanium==1)
-				dat += "<A href='?src=\ref[src];sel_titanium=no'><font color='green'>Smelting</font></A> "
-			else
-				dat += "<A href='?src=\ref[src];sel_titanium=yes'><font color='red'>Not smelting</font></A> "
-			dat += "Titanium: [machine.ore_titanium]<br>"
-		else
-			machine.selected_titanium = 0
-
-
-		//On or off
-		dat += text("Machine is currently ")
-		if (machine.on==1)
-			dat += text("<A href='?src=\ref[src];set_on=off'>On</A> ")
-		else
-			dat += text("<A href='?src=\ref[src];set_on=on'>Off</A> ")
+/obj/machinery/mineral/processing_unit_console/Initialize(mapload)
+	. = ..()
+	processing_machine = locate(/obj/machinery/mineral/processing_unit) in view(2, src)
+	if (processing_machine)
+		processing_machine.mineral_machine = src
 	else
-		dat+="---No Materials Loaded---"
+		return INITIALIZE_HINT_QDEL
 
+/obj/machinery/mineral/processing_unit_console/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "ProcessingConsole")
+		ui.open()
 
-	user << browse(dat, "window=console_processing_unit")
+/obj/machinery/mineral/processing_unit_console/ui_static_data(mob/user)
+	return processing_machine.ui_static_data()
 
+/obj/machinery/mineral/processing_unit_console/ui_data(mob/user)
+	return processing_machine.ui_data()
 
-
-/obj/machinery/mineral/processing_unit_console/Topic(href, href_list)
-	if(..())
+/obj/machinery/mineral/processing_unit_console/ui_act(action, list/params)
+	. = ..()
+	if(.)
 		return
-	usr.set_machine(src)
-	src.add_fingerprint(usr)
-	if(href_list["sel_iron"])
-		if (href_list["sel_iron"] == "yes")
-			machine.selected_iron = 1
-		else
-			machine.selected_iron = 0
-	if(href_list["sel_glass"])
-		if (href_list["sel_glass"] == "yes")
-			machine.selected_glass = 1
-		else
-			machine.selected_glass = 0
-	if(href_list["sel_plasma"])
-		if (href_list["sel_plasma"] == "yes")
-			machine.selected_plasma = 1
-		else
-			machine.selected_plasma = 0
-	if(href_list["sel_uranium"])
-		if (href_list["sel_uranium"] == "yes")
-			machine.selected_uranium = 1
-		else
-			machine.selected_uranium = 0
-	if(href_list["sel_gold"])
-		if (href_list["sel_gold"] == "yes")
-			machine.selected_gold = 1
-		else
-			machine.selected_gold = 0
-	if(href_list["sel_silver"])
-		if (href_list["sel_silver"] == "yes")
-			machine.selected_silver = 1
-		else
-			machine.selected_silver = 0
-	if(href_list["sel_diamond"])
-		if (href_list["sel_diamond"] == "yes")
-			machine.selected_diamond = 1
-		else
-			machine.selected_diamond = 0
-	if(href_list["sel_clown"])
-		if (href_list["sel_clown"] == "yes")
-			machine.selected_clown = 1
-		else
-			machine.selected_clown = 0
-	if(href_list["sel_titanium"])
-		if (href_list["sel_titanium"] == "yes")
-			machine.selected_titanium = 1
-		else
-			machine.selected_titanium = 0
-	if(href_list["set_on"])
-		if (href_list["set_on"] == "on")
-			machine.on = 1
-		else
-			machine.on = 0
-	src.updateUsrDialog()
-	return
+
+	switch(action)
+		if("setMaterial")
+			var/datum/material/new_material = locate(params["value"])
+			if(!istype(new_material))
+				return
+
+			processing_machine.selected_material = new_material
+			processing_machine.selected_alloy = null
+			return TRUE
+
+		if("setAlloy")
+			processing_machine.selected_material = null
+			processing_machine.selected_alloy = params["value"]
+			return TRUE
+
+		if("toggle")
+			processing_machine.on = !processing_machine.on
+			if(processing_machine.on)
+				processing_machine.begin_processing()
+			return TRUE
+
+/obj/machinery/mineral/processing_unit_console/Destroy()
+	processing_machine = null
+	return ..()
+
 
 /**********************Mineral processing unit**************************/
 
@@ -193,238 +132,154 @@
 	name = "furnace"
 	icon = 'icons/obj/machines/mining_machines.dmi'
 	icon_state = "furnace"
-	density = 1
-	anchored = 1
-	var/obj/machinery/mineral/CONSOLE = null
-	var/ore_gold = 0;
-	var/ore_silver = 0;
-	var/ore_diamond = 0;
-	var/ore_glass = 0;
-	var/ore_plasma = 0;
-	var/ore_uranium = 0;
-	var/ore_iron = 0;
-	var/ore_clown = 0;
-	var/ore_adamantine = 0;
-	var/ore_titanium = 0;
-	var/selected_gold = 0
-	var/selected_silver = 0
-	var/selected_diamond = 0
-	var/selected_glass = 0
-	var/selected_plasma = 0
-	var/selected_uranium = 0
-	var/selected_iron = 0
-	var/selected_clown = 0
-	var/selected_titanium = 0
-	var/on = 0 //0 = off, 1 =... oh you know!
+	density = TRUE
+	needs_item_input = TRUE
+	var/on = FALSE
+	var/selected_alloy
+	var/obj/machinery/mineral/mineral_machine
+	var/datum/material/selected_material
+	var/datum/techweb/stored_research
+	///Proximity monitor associated with this atom, needed for proximity checks.
+	var/datum/proximity_monitor/proximity_monitor
+	///Material container for materials
+	var/datum/component/material_container/materials
 
-/obj/machinery/mineral/processing_unit/process()
-	for(var/i in 1 to 10)
-		if (on)
-			if (selected_glass && !selected_gold && !selected_silver && !selected_diamond && !selected_plasma && !selected_uranium && !selected_iron && !selected_clown && !selected_titanium)
-				if (ore_glass > 0)
-					ore_glass--
-					generate_mineral(/obj/item/stack/sheet/glass)
-				else
-					on = 0
-				continue
-			if (selected_glass && !selected_gold && !selected_silver && !selected_diamond && !selected_plasma && !selected_uranium && selected_iron && !selected_clown && !selected_titanium)
-				if (ore_glass > 0 && ore_iron > 0)
-					ore_glass--
-					ore_iron--
-					generate_mineral(/obj/item/stack/sheet/rglass)
-				else
-					on = 0
-				continue
-			if (!selected_glass && selected_gold && !selected_silver && !selected_diamond && !selected_plasma && !selected_uranium && !selected_iron && !selected_clown && !selected_titanium)
-				if (ore_gold > 0)
-					ore_gold--
-					generate_mineral(/obj/item/stack/sheet/mineral/gold)
-				else
-					on = 0
-				continue
-			if (!selected_glass && !selected_gold && selected_silver && !selected_diamond && !selected_plasma && !selected_uranium && !selected_iron && !selected_clown && !selected_titanium)
-				if (ore_silver > 0)
-					ore_silver--
-					generate_mineral(/obj/item/stack/sheet/mineral/silver)
-				else
-					on = 0
-				continue
-			if (!selected_glass && !selected_gold && !selected_silver && selected_diamond && !selected_plasma && !selected_uranium && !selected_iron && !selected_clown && !selected_titanium)
-				if (ore_diamond > 0)
-					ore_diamond--
-					generate_mineral(/obj/item/stack/sheet/mineral/diamond)
-				else
-					on = 0
-				continue
-			if (!selected_glass && !selected_gold && !selected_silver && !selected_diamond && selected_plasma && !selected_uranium && !selected_iron && !selected_clown && !selected_titanium)
-				if (ore_plasma > 0)
-					ore_plasma--
-					generate_mineral(/obj/item/stack/sheet/mineral/plasma)
-				else
-					on = 0
-				continue
-			if (!selected_glass && !selected_gold && !selected_silver && !selected_diamond && !selected_plasma && selected_uranium && !selected_iron && !selected_clown && !selected_titanium)
-				if (ore_uranium > 0)
-					ore_uranium--
-					generate_mineral(/obj/item/stack/sheet/mineral/uranium)
-				else
-					on = 0
-				continue
-			if (!selected_glass && !selected_gold && !selected_silver && !selected_diamond && !selected_plasma && !selected_uranium && selected_iron && !selected_clown && !selected_titanium)
-				if (ore_iron > 0)
-					ore_iron--
-					generate_mineral(/obj/item/stack/sheet/metal)
-				else
-					on = 0
-				continue
-			if (!selected_glass && !selected_gold && !selected_silver && !selected_diamond && selected_plasma && !selected_uranium && selected_iron && !selected_clown && !selected_titanium)
-				if (ore_iron > 0 && ore_plasma > 0)
-					ore_iron--
-					ore_plasma--
-					generate_mineral(/obj/item/stack/sheet/plasteel)
-				else
-					on = 0
-				continue
-			if (!selected_glass && !selected_gold && !selected_silver && !selected_diamond && !selected_plasma && !selected_uranium && !selected_iron && selected_clown && !selected_titanium)
-				if (ore_clown > 0)
-					ore_clown--
-					generate_mineral(/obj/item/stack/sheet/mineral/bananium)
-				else
-					on = 0
-				continue
-			if (!selected_glass && !selected_gold && !selected_silver && !selected_diamond && !selected_plasma && !selected_uranium && !selected_iron && !selected_clown && selected_titanium)
-				if (ore_titanium > 0)
-					ore_titanium--
-					generate_mineral(/obj/item/stack/sheet/mineral/titanium)
-				else
-					on = 0
-				continue
-			if (!selected_glass && !selected_gold && !selected_silver && !selected_diamond && selected_plasma && !selected_uranium && !selected_iron && !selected_clown && selected_titanium)
-				if (ore_titanium > 0)
-					ore_titanium--
-					ore_plasma--
-					generate_mineral(/obj/item/stack/sheet/mineral/plastitanium)
-				else
-					on = 0
-				continue
-			//THESE TWO ARE CODED FOR URIST TO USE WHEN HE GETS AROUND TO IT.
-			//They were coded on 18 Feb 2012. If you're reading this in 2015, then firstly congratulations on the world not ending on 21 Dec 2012 and secondly, Urist is apparently VERY lazy. ~Errorage
-			//Even in the dark year of 2016, where /tg/ is dead, Urist still hasn't finished this -Bawhoppennn
-			/*if (selected_glass == 0 && selected_gold == 0 && selected_silver == 0 && selected_diamond == 1 && selected_plasma == 0 && selected_uranium == 1 && selected_iron == 0 && selected_clown == 0)
-				if (ore_uranium >= 2 && ore_diamond >= 1)
-					ore_uranium -= 2
-					ore_diamond -= 1
-					generate_mineral(/obj/item/stack/sheet/mineral/adamantine)
-				else
-					on = 0
-				continue
-			if (selected_glass == 0 && selected_gold == 0 && selected_silver == 1 && selected_diamond == 0 && selected_plasma == 1 && selected_uranium == 0 && selected_iron == 0 && selected_clown == 0)
-				if (ore_silver >= 1 && ore_plasma >= 3)
-					ore_silver -= 1
-					ore_plasma -= 3
-					generate_mineral(/obj/item/stack/sheet/mineral/mythril)
-				else
-					on = 0
-				continue*/
+/obj/machinery/mineral/processing_unit/Initialize(mapload)
+	. = ..()
+	proximity_monitor = new(src, 1)
 
+	materials = AddComponent( \
+		/datum/component/material_container, \
+		SSmaterials.materials_by_category[MAT_CATEGORY_SILO], \
+		INFINITY, \
+		MATCONTAINER_EXAMINE, \
+		allowed_items = /obj/item/stack \
+	)
+	if(!GLOB.autounlock_techwebs[/datum/techweb/autounlocking/smelter])
+		GLOB.autounlock_techwebs[/datum/techweb/autounlocking/smelter] = new /datum/techweb/autounlocking/smelter
+	stored_research = GLOB.autounlock_techwebs[/datum/techweb/autounlocking/smelter]
+	selected_material = GET_MATERIAL_REF(/datum/material/iron)
 
-			//if a non valid combination is selected
+/obj/machinery/mineral/processing_unit/Destroy()
+	materials = null
+	mineral_machine = null
+	stored_research = null
+	return ..()
 
-			var/b = 1 //this part checks if all required ores are available
+/obj/machinery/mineral/processing_unit/proc/process_ore(obj/item/stack/ore/O)
+	if(QDELETED(O))
+		return
+	var/material_amount = materials.get_item_material_amount(O)
+	if(!materials.has_space(material_amount))
+		unload_mineral(O)
+	else
+		materials.insert_item(O)
 
-			if (!(selected_gold || selected_silver ||selected_diamond || selected_uranium | selected_plasma || selected_iron || selected_iron))
-				b = 0
+/obj/machinery/mineral/processing_unit/ui_static_data()
+	var/list/data = list()
 
-			if (selected_gold == 1)
-				if (ore_gold <= 0)
-					b = 0
-			if (selected_silver == 1)
-				if (ore_silver <= 0)
-					b = 0
-			if (selected_diamond == 1)
-				if (ore_diamond <= 0)
-					b = 0
-			if (selected_uranium == 1)
-				if (ore_uranium <= 0)
-					b = 0
-			if (selected_plasma == 1)
-				if (ore_plasma <= 0)
-					b = 0
-			if (selected_iron == 1)
-				if (ore_iron <= 0)
-					b = 0
-			if (selected_glass == 1)
-				if (ore_glass <= 0)
-					b = 0
-			if (selected_clown == 1)
-				if (ore_clown <= 0)
-					b = 0
+	for(var/datum/material/material as anything in materials.materials)
+		var/obj/display = initial(material.sheet_type)
+		data["materialIcons"] += list(
+			list(
+				"id" = REF(material),
+				"icon" = icon2base64(icon(initial(display.icon), icon_state = initial(display.icon_state), frame = 1)),
+				)
+			)
 
-			if (b) //if they are, deduct one from each, produce slag and shut the machine off
-				if (selected_gold == 1)
-					ore_gold--
-				if (selected_silver == 1)
-					ore_silver--
-				if (selected_diamond == 1)
-					ore_diamond--
-				if (selected_uranium == 1)
-					ore_uranium--
-				if (selected_plasma == 1)
-					ore_plasma--
-				if (selected_iron == 1)
-					ore_iron--
-				if (selected_clown == 1)
-					ore_clown--
-				generate_mineral(/obj/item/weapon/ore/slag)
-				on = 0
-			else
-				on = 0
-				break
-			break
-		else
-			break
-	var/turf/T = get_step(src,input_dir)
-	if(T)
-		var/n = 0
-		for(var/obj/item/O in T)
-			n++
-			if(n>10)
-				break
-			if (istype(O,/obj/item/weapon/ore/iron))
-				ore_iron++;
-				O.loc = null
-				continue
-			if (istype(O,/obj/item/weapon/ore/glass))
-				ore_glass++;
-				O.loc = null
-				continue
-			if (istype(O,/obj/item/weapon/ore/diamond))
-				ore_diamond++;
-				O.loc = null
-				continue
-			if (istype(O,/obj/item/weapon/ore/plasma))
-				ore_plasma++
-				O.loc = null
-				continue
-			if (istype(O,/obj/item/weapon/ore/gold))
-				ore_gold++
-				O.loc = null
-				continue
-			if (istype(O,/obj/item/weapon/ore/silver))
-				ore_silver++
-				O.loc = null
-				continue
-			if (istype(O,/obj/item/weapon/ore/uranium))
-				ore_uranium++
-				O.loc = null
-				continue
-			if (istype(O,/obj/item/weapon/ore/bananium))
-				ore_clown++
-				O.loc = null
-				continue
-			unload_mineral(O)
+	for(var/research in stored_research.researched_designs)
+		var/datum/design/design = SSresearch.techweb_design_by_id(research)
+		var/obj/display = initial(design.build_path)
+		data["alloyIcons"] += list(
+			list(
+				"id" = design.id,
+				"icon" = icon2base64(icon(initial(display.icon), icon_state = initial(display.icon_state), frame = 1)),
+				)
+			)
 
+	data += materials.ui_static_data()
+
+	return data
+
+/obj/machinery/mineral/processing_unit/ui_data()
+	var/list/data = list()
+
+	data["materials"] = materials.ui_data()
+	data["selectedMaterial"] = selected_material?.name
+
+	data["alloys"] = list()
+	for(var/research in stored_research.researched_designs)
+		var/datum/design/design = SSresearch.techweb_design_by_id(research)
+		data["alloys"] += list(
+			list(
+				"name" = design.name,
+				"id" = design.id,
+				)
+			)
+	data["selectedAlloy"] = selected_alloy
+
+	data["state"] = on
+
+	return data
+
+/obj/machinery/mineral/processing_unit/pickup_item(datum/source, atom/movable/target, direction)
+	if(QDELETED(target))
+		return
+	if(istype(target, /obj/item/stack/ore))
+		process_ore(target)
+
+/obj/machinery/mineral/processing_unit/process(seconds_per_tick)
+	if(!on)
+		return PROCESS_KILL
+
+	if(selected_material)
+		smelt_ore(seconds_per_tick)
+	else if(selected_alloy)
+		smelt_alloy(seconds_per_tick)
+
+/obj/machinery/mineral/processing_unit/proc/smelt_ore(seconds_per_tick = 2)
+	var/datum/material/mat = selected_material
+	if(!mat)
+		return
+	var/sheets_to_remove = (materials.materials[mat] >= (SHEET_MATERIAL_AMOUNT * SMELT_AMOUNT * seconds_per_tick) ) ? SMELT_AMOUNT * seconds_per_tick : round(materials.materials[mat] /  SHEET_MATERIAL_AMOUNT)
+	if(!sheets_to_remove)
+		on = FALSE
+	else
+		var/out = get_step(src, output_dir)
+		materials.retrieve_sheets(sheets_to_remove, mat, out)
+
+/obj/machinery/mineral/processing_unit/proc/smelt_alloy(seconds_per_tick = 2)
+	var/datum/design/alloy = stored_research.isDesignResearchedID(selected_alloy) //check if it's a valid design
+	if(!alloy)
+		on = FALSE
+		return
+
+	var/amount = can_smelt(alloy, seconds_per_tick)
+
+	if(!amount)
+		on = FALSE
+		return
+
+	materials.use_materials(alloy.materials, multiplier = amount)
+
+	generate_mineral(alloy.build_path)
+
+/obj/machinery/mineral/processing_unit/proc/can_smelt(datum/design/D, seconds_per_tick = 2)
+	if(D.make_reagent)
+		return FALSE
+
+	var/build_amount = SMELT_AMOUNT * seconds_per_tick
+
+	for(var/mat_cat in D.materials)
+		var/required_amount = D.materials[mat_cat]
+		var/amount = materials.materials[mat_cat]
+
+		build_amount = min(build_amount, round(amount / required_amount))
+
+	return build_amount
 
 /obj/machinery/mineral/processing_unit/proc/generate_mineral(P)
 	var/O = new P(src)
 	unload_mineral(O)
+
+#undef SMELT_AMOUNT

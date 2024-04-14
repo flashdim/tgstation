@@ -2,44 +2,47 @@
 	if(stat == DEAD)
 		return
 
+	if(!gibbed)
+		// Will update all AI status displays with a blue screen of death
+		INVOKE_ASYNC(src, PROC_REF(emote), "bsod")
+
+	if(!isnull(deployed_shell))
+		disconnect_shell()
+
 	. = ..()
 
-	if("[icon_state]_dead" in icon_states(src.icon,1))
-		icon_state = "[icon_state]_dead"
+	cut_overlays() //remove portraits
+	var/base_icon = icon_state
+	if(icon_exists(icon, "[base_icon]_dead"))
+		icon_state = "[base_icon]_dead"
 	else
 		icon_state = "ai_dead"
 
-	cameraFollow = null
+	if(icon_exists(icon, "[base_icon]_death_transition"))
+		flick("[base_icon]_death_transition", src)
 
-	anchored = 0 //unbolt floorbolts
-	update_canmove()
+	if(is_anchored)
+		flip_anchored()
+
 	if(eyeobj)
 		eyeobj.setLoc(get_turf(src))
+		set_eyeobj_visible(FALSE)
 
 	GLOB.shuttle_caller_list -= src
 	SSshuttle.autoEvac()
 
 	ShutOffDoomsdayDevice()
 
-	if(explosive)
-		spawn(10)
-			explosion(src.loc, 3, 6, 12, 15)
+	if(gibbed)
+		make_mmi_drop_and_transfer()
 
-	for(var/obj/machinery/ai_status_display/O in world) //change status
-		if(src.key)
-			O.mode = 2
-			if(istype(loc, /obj/item/device/aicard))
-				loc.icon_state = "aicard-404"
+	if(explosive)
+		addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(explosion), loc, 3, 6, 12, null, 15), 1 SECONDS)
+
+	SSblackbox.ReportDeath(src)
 
 /mob/living/silicon/ai/proc/ShutOffDoomsdayDevice()
 	if(nuking)
-		set_security_level("red")
 		nuking = FALSE
-		for(var/obj/item/weapon/pinpointer/P in GLOB.pinpointer_list)
-			P.switch_mode_to(TRACK_NUKE_DISK) //Party's over, back to work, everyone
-			P.nuke_warning = FALSE
-
 	if(doomsday_device)
-		doomsday_device.timing = FALSE
-		SSshuttle.clearHostileEnvironment(doomsday_device)
 		qdel(doomsday_device)

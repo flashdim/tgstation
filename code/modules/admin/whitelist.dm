@@ -1,7 +1,6 @@
-#define WHITELISTFILE "config/whitelist.txt"
+#define WHITELISTFILE "[global.config.directory]/whitelist.txt"
 
 GLOBAL_LIST(whitelist)
-GLOBAL_PROTECT(whitelist)
 
 /proc/load_whitelist()
 	GLOB.whitelist = list()
@@ -10,12 +9,12 @@ GLOBAL_PROTECT(whitelist)
 			continue
 		if(findtextEx(line,"#",1,2))
 			continue
-		GLOB.whitelist += line
+		GLOB.whitelist += ckey(line)
 
 	if(!GLOB.whitelist.len)
 		GLOB.whitelist = null
 
-/proc/check_whitelist(var/ckey)
+/proc/check_whitelist(ckey)
 	if(!GLOB.whitelist)
 		return FALSE
 	. = (ckey in GLOB.whitelist)

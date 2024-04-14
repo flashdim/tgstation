@@ -1,26 +1,16 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
 "aa" = (
-/turf/open/space,
-/area/space)
-"ab" = (
-/turf/closed/wall/mineral/titanium/overspace,
-/area/shuttle/escape)
+/turf/template_noop,
+/area/template_noop)
 "ac" = (
-/obj/structure/sign/radiation,
+/obj/structure/sign/warning/radiation,
 /turf/closed/wall/mineral/titanium,
 /area/shuttle/escape)
 "ad" = (
-/obj/structure/grille,
-/obj/structure/window/shuttle,
+/obj/effect/spawner/structure/window/reinforced/shuttle,
 /turf/open/floor/plating,
 /area/shuttle/escape)
 "ae" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swall_s10";
-	dir = 2
-	},
-/area/shuttle/escape)
-"af" = (
 /turf/closed/wall/mineral/titanium,
 /area/shuttle/escape)
 "ag" = (
@@ -31,34 +21,25 @@
 /turf/open/floor/mineral/titanium/yellow,
 /area/shuttle/escape)
 "ah" = (
-/obj/structure/chair,
+/obj/structure/chair/comfy/shuttle,
 /turf/open/floor/mineral/titanium/yellow,
 /area/shuttle/escape)
 "ai" = (
 /turf/open/floor/mineral/titanium/yellow,
 /area/shuttle/escape)
 "aj" = (
-/obj/structure/chair{
+/obj/structure/chair/comfy/shuttle{
 	dir = 1
 	},
 /turf/open/floor/mineral/titanium/yellow,
 /area/shuttle/escape)
-"ak" = (
-/obj/structure/sign/radiation,
-/turf/closed/wall/shuttle{
-	tag = "icon-swall3";
-	icon_state = "swall3"
-	},
-/area/shuttle/escape)
 "al" = (
-/obj/machinery/shower{
-	dir = 8
-	},
+/obj/machinery/shower/directional/west,
 /turf/open/floor/noslip,
 /area/shuttle/escape)
 "am" = (
-/obj/structure/reflector/single{
-	anchored = 1
+/obj/structure/reflector/single/mapping{
+	dir = 6
 	},
 /obj/effect/turf_decal/stripes/line{
 	dir = 8
@@ -66,17 +47,12 @@
 /turf/open/floor/plating,
 /area/shuttle/escape)
 "an" = (
-/obj/structure/reflector/box{
-	anchored = 1
-	},
+/obj/structure/reflector/box/mapping,
 /turf/open/floor/plating,
 /area/shuttle/escape)
 "ao" = (
-/obj/structure/reflector/single{
-	tag = "icon-reflector (WEST)";
-	icon_state = "reflector";
-	dir = 8;
-	anchored = 1
+/obj/structure/reflector/single/mapping{
+	dir = 10
 	},
 /obj/effect/turf_decal/stripes/line{
 	dir = 4
@@ -84,17 +60,11 @@
 /turf/open/floor/plating,
 /area/shuttle/escape)
 "ap" = (
-/obj/machinery/shower{
-	dir = 4
-	},
+/obj/machinery/shower/directional/east,
 /turf/open/floor/noslip,
 /area/shuttle/escape)
-"aq" = (
-/obj/machinery/status_display,
-/turf/closed/wall/mineral/titanium,
-/area/shuttle/escape)
 "ar" = (
-/obj/structure/chair{
+/obj/structure/chair/comfy/shuttle{
 	dir = 8
 	},
 /turf/open/floor/mineral/titanium/yellow,
@@ -115,28 +85,13 @@
 /turf/open/floor/plating,
 /area/shuttle/escape)
 "av" = (
-/obj/structure/chair{
+/obj/structure/chair/comfy/shuttle{
 	dir = 4
 	},
 /turf/open/floor/mineral/titanium/yellow,
 /area/shuttle/escape)
 "aw" = (
 /turf/closed/wall/mineral/titanium/nodiagonal,
-/area/shuttle/escape)
-"ax" = (
-/turf/open/floor/mineral/titanium/yellow,
-/turf/closed/wall/mineral/titanium/interior,
-/area/shuttle/escape)
-"ay" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swall_f5";
-	dir = 2
-	},
-/area/shuttle/escape)
-"az" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swallc1"
-	},
 /area/shuttle/escape)
 "aA" = (
 /obj/machinery/door/airlock/titanium{
@@ -145,25 +100,14 @@
 /turf/open/floor/plating,
 /area/shuttle/escape)
 "aB" = (
-/obj/machinery/power/supermatter_shard/hugbox{
-	anchored = 1;
-	base_icon_state = "darkmatter";
-	explosion_power = 20;
-	gasefficency = 0.15;
-	icon_state = "darkmatter";
-	name = "anchored supermatter crystal"
-	},
+/obj/machinery/power/supermatter_crystal/hugbox,
 /turf/open/floor/plating,
-/area/shuttle/escape)
-"aC" = (
-/obj/structure/sign/radiation,
-/turf/closed/wall/mineral/titanium,
 /area/shuttle/escape)
 "aD" = (
 /obj/structure/table/reinforced,
-/obj/item/weapon/storage/firstaid/toxin,
-/obj/item/weapon/crowbar/red,
-/obj/item/weapon/storage/box/snappops{
+/obj/item/storage/medkit/toxin,
+/obj/item/crowbar/red,
+/obj/item/storage/box/snappops{
 	pixel_x = 4;
 	pixel_y = -4
 	},
@@ -178,77 +122,45 @@
 	name = "Emergency Shuttle Airlock"
 	},
 /obj/docking_port/mobile/emergency{
-	name = "Hyperfractal Gigashuttle";
-	timid = 1
+	name = "Hyperfractal Gigashuttle"
 	},
 /turf/open/floor/plating,
 /area/shuttle/escape)
-"aG" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swallc3"
-	},
-/area/shuttle/escape)
-"aH" = (
-/obj/machinery/status_display,
-/turf/closed/wall/shuttle{
-	icon_state = "swall12"
-	},
-/area/shuttle/escape)
 "aI" = (
-/obj/structure/sign/radiation,
+/obj/structure/sign/warning/radiation,
 /turf/closed/wall/mineral/titanium/nodiagonal,
 /area/shuttle/escape)
-"aJ" = (
-/obj/structure/sign/radiation,
-/turf/closed/wall/shuttle{
-	icon_state = "swallc2";
-	dir = 2
-	},
-/area/shuttle/escape)
-"aK" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swallc4";
-	dir = 2
-	},
-/area/shuttle/escape)
 "aL" = (
-/obj/machinery/door/airlock/external{
-	name = "Emergency Launch Catwalk";
-	req_access = null;
-	req_access_txt = "10;13"
+/obj/machinery/door/airlock/external/ruin{
+	name = "Emergency Launch Catwalk"
 	},
+/obj/effect/mapping_helpers/airlock/access/all/engineering/general,
 /turf/open/floor/plating,
 /area/shuttle/escape)
 "aM" = (
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
 "aN" = (
-/obj/structure/reflector/single{
-	anchored = 1
+/obj/structure/reflector/single/mapping{
+	dir = 6
 	},
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
 "aO" = (
-/obj/structure/reflector/double{
-	anchored = 1
+/obj/structure/reflector/double/mapping{
+	dir = 6
 	},
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
 "aP" = (
-/obj/structure/reflector/double{
-	tag = "icon-reflector_double (NORTH)";
-	icon_state = "reflector_double";
-	dir = 1;
-	anchored = 1
+/obj/structure/reflector/double/mapping{
+	dir = 10
 	},
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
 "aQ" = (
-/obj/structure/reflector/single{
-	tag = "icon-reflector (WEST)";
-	icon_state = "reflector";
-	dir = 8;
-	anchored = 1
+/obj/structure/reflector/single/mapping{
+	dir = 10
 	},
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
@@ -277,10 +189,7 @@
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
 "aV" = (
-/obj/machinery/power/supermatter_shard/hugbox{
-	anchored = 1;
-	name = "anchored supermatter shard"
-	},
+/obj/machinery/power/supermatter_crystal/shard/hugbox,
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
 "aW" = (
@@ -296,9 +205,7 @@
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
 "aY" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 2
-	},
+/obj/effect/turf_decal/stripes/line,
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
 "aZ" = (
@@ -314,22 +221,24 @@
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
 "bb" = (
-/obj/structure/chair,
+/obj/structure/chair/comfy/shuttle,
 /obj/effect/turf_decal/stripes/line{
 	dir = 1
 	},
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
 "bc" = (
-/obj/structure/shuttle/engine/heater,
+/obj/machinery/power/shuttle_engine/heater,
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
 "bd" = (
-/obj/machinery/computer/emergency_shuttle,
+/obj/machinery/computer/emergency_shuttle{
+	dir = 1
+	},
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
 "be" = (
-/obj/structure/shuttle/engine/propulsion,
+/obj/machinery/power/shuttle_engine/propulsion,
 /turf/open/floor/plating/airless,
 /area/shuttle/escape)
 "bf" = (
@@ -355,10 +264,7 @@
 	anchored = 1
 	},
 /obj/item/clothing/glasses/meson/engine,
-/obj/machinery/light{
-	icon_state = "tube1";
-	dir = 8
-	},
+/obj/machinery/light/small/directional/east,
 /turf/open/floor/mineral/titanium/yellow,
 /area/shuttle/escape)
 "bj" = (
@@ -366,29 +272,52 @@
 	anchored = 1
 	},
 /obj/item/clothing/glasses/meson/engine,
-/obj/machinery/light{
-	dir = 4
-	},
+/obj/machinery/light/small/directional/west,
 /turf/open/floor/mineral/titanium/yellow,
 /area/shuttle/escape)
 "bk" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 8
 	},
-/obj/machinery/light{
-	icon_state = "tube1";
-	dir = 8
-	},
+/obj/machinery/light/warm/directional/west,
 /turf/open/floor/plating,
 /area/shuttle/escape)
 "bl" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 4
 	},
-/obj/machinery/light{
-	dir = 4
-	},
+/obj/machinery/light/warm/directional/east,
 /turf/open/floor/plating,
+/area/shuttle/escape)
+"hD" = (
+/obj/structure/lattice/catwalk,
+/turf/template_noop,
+/area/shuttle/escape)
+"pb" = (
+/obj/structure/closet/radiation{
+	anchored = 1
+	},
+/obj/item/clothing/glasses/meson/engine,
+/obj/machinery/status_display/evac{
+	pixel_x = 32
+	},
+/turf/open/floor/mineral/titanium/yellow,
+/area/shuttle/escape)
+"Bi" = (
+/obj/structure/closet/radiation{
+	anchored = 1
+	},
+/obj/item/clothing/glasses/meson/engine,
+/obj/machinery/status_display/evac{
+	pixel_x = -32
+	},
+/turf/open/floor/mineral/titanium/yellow,
+/area/shuttle/escape)
+"UA" = (
+/obj/machinery/status_display/evac{
+	pixel_y = -32
+	},
+/turf/open/floor/mineral/titanium/yellow,
 /area/shuttle/escape)
 
 (1,1,1) = {"
@@ -416,17 +345,17 @@ aa
 aa
 "}
 (2,1,1) = {"
-af
-af
+aw
+ae
 ad
 ac
-aq
+ae
 ad
-ax
+aw
 ai
 aD
-ai
-aq
+UA
+ae
 aa
 aa
 aN
@@ -434,17 +363,17 @@ aM
 aR
 aU
 aX
-at
+aM
 ba
 bc
 be
 "}
 (3,1,1) = {"
 ac
+bj
 ag
 ag
-bi
-ag
+Bi
 ag
 ag
 ai
@@ -453,12 +382,12 @@ ai
 ad
 aa
 aa
-at
+aM
 aa
 aS
 aV
 aY
-at
+aM
 ba
 bc
 be
@@ -477,13 +406,13 @@ ar
 aI
 aw
 aa
-at
+aM
 aa
 aT
 aW
 aZ
 aa
-aM
+hD
 aa
 aa
 "}
@@ -500,11 +429,11 @@ as
 as
 bk
 ad
-at
+aM
 aO
 aa
 aa
-aM
+hD
 aa
 aa
 aR
@@ -526,11 +455,11 @@ at
 aL
 aM
 aM
-aM
-aM
-aM
-aM
-aM
+hD
+hD
+hD
+hD
+hD
 bb
 bd
 aY
@@ -548,11 +477,11 @@ au
 au
 bl
 ad
-at
+aM
 aP
 aa
 aa
-aM
+hD
 aa
 aa
 aT
@@ -573,22 +502,22 @@ av
 aI
 aw
 aa
-at
+aM
 aa
 aR
 aU
 aX
 aa
-aM
+hD
 aa
 aa
 "}
 (9,1,1) = {"
 ac
+bi
 ag
 ag
-bj
-ag
+pb
 ag
 ag
 ai
@@ -597,28 +526,28 @@ ai
 ad
 aa
 aa
-at
+aM
 aa
 aS
 aV
 aY
-at
+aM
 ba
 bc
 be
 "}
 (10,1,1) = {"
-af
-af
+aw
+ae
 ad
 ac
-aq
+ae
 ad
-ax
+aw
 ai
 aE
-ai
-aq
+UA
+ae
 aa
 aa
 aQ
@@ -626,7 +555,7 @@ aM
 aT
 aW
 aZ
-at
+aM
 ba
 bc
 be

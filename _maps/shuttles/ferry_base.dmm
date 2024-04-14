@@ -1,10 +1,9 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
 "a" = (
-/turf/open/space,
-/area/space)
+/turf/template_noop,
+/area/template_noop)
 "b" = (
-/obj/structure/shuttle/engine/propulsion{
-	icon_state = "propulsion";
+/obj/machinery/power/shuttle_engine/propulsion{
 	dir = 4
 	},
 /turf/closed/wall/mineral/titanium,
@@ -12,35 +11,28 @@
 "c" = (
 /turf/closed/wall/mineral/titanium,
 /area/shuttle/transport)
-"d" = (
-/obj/structure/window/shuttle,
-/obj/structure/grille,
-/turf/open/floor/plating,
-/area/shuttle/transport)
 "e" = (
-/obj/structure/grille,
-/obj/structure/window/shuttle,
+/obj/effect/spawner/structure/window/reinforced/shuttle,
 /turf/open/floor/plating,
-/area/shuttle/transport)
-"f" = (
-/turf/closed/wall/mineral/titanium/overspace,
 /area/shuttle/transport)
 "g" = (
-/turf/open/floor/mineral/titanium/blue,
 /turf/closed/wall/mineral/titanium/interior,
 /area/shuttle/transport)
 "h" = (
-/obj/structure/chair{
+/obj/structure/chair/comfy/shuttle{
 	dir = 4
 	},
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/transport)
 "i" = (
-/obj/machinery/computer/shuttle/ferry/request,
+/obj/machinery/computer/shuttle/ferry/request{
+	dir = 8
+	},
+/obj/machinery/light/directional/north,
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/transport)
 "j" = (
-/obj/structure/chair,
+/obj/structure/chair/comfy/shuttle,
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/transport)
 "k" = (
@@ -54,63 +46,49 @@
 /obj/machinery/door/airlock/titanium,
 /obj/docking_port/mobile{
 	dir = 8;
-	dwidth = 2;
-	height = 12;
-	id = "ferry";
+	shuttle_id = "ferry";
 	name = "ferry shuttle";
-	roundstart_move = "ferry_away";
-	port_angle = 180;
-	width = 5;
-	timid = 1
+	port_direction = 2
 	},
 /turf/open/floor/mineral/titanium/blue,
-/area/shuttle/transport)
-"n" = (
-/obj/structure/shuttle/engine/propulsion{
-	icon_state = "propulsion";
-	dir = 4
-	},
-/turf/closed/wall/shuttle{
-	icon_state = "swall_s5";
-	dir = 2
-	},
-/area/shuttle/transport)
-"o" = (
-/turf/open/floor/plasteel/shuttle,
-/turf/closed/wall/mineral/titanium/interior{
-	icon_state = "swall_f10"
-	},
 /area/shuttle/transport)
 "p" = (
 /obj/structure/closet/crate,
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/transport)
 "q" = (
-/obj/structure/chair{
+/obj/structure/chair/comfy/shuttle{
 	dir = 1
 	},
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/transport)
-"r" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swall_s9";
-	dir = 2
+"J" = (
+/obj/machinery/power/shuttle_engine/propulsion{
+	dir = 8
 	},
+/turf/closed/wall/mineral/titanium,
+/area/shuttle/transport)
+"U" = (
+/obj/structure/chair/comfy/shuttle{
+	dir = 1
+	},
+/obj/machinery/light/directional/south,
+/turf/open/floor/mineral/titanium/blue,
 /area/shuttle/transport)
 
 (1,1,1) = {"
 a
-b
+J
 k
-b
+J
 a
 "}
 (2,1,1) = {"
-b
+J
 g
 l
 g
-b
+J
 "}
 (3,1,1) = {"
 c
@@ -127,11 +105,11 @@ p
 c
 "}
 (5,1,1) = {"
-d
+e
 j
 l
 q
-d
+e
 "}
 (6,1,1) = {"
 c
@@ -165,7 +143,7 @@ e
 c
 j
 l
-q
+U
 c
 "}
 (11,1,1) = {"
@@ -176,9 +154,9 @@ q
 c
 "}
 (12,1,1) = {"
-c
-d
+b
+e
 m
-d
-c
+e
+b
 "}

@@ -1,79 +1,44 @@
-GLOBAL_LIST_INIT(command_positions, list(
-	"Captain",
-	"Head of Personnel",
-	"Head of Security",
-	"Chief Engineer",
-	"Research Director",
-	"Chief Medical Officer"))
-
-
-GLOBAL_LIST_INIT(engineering_positions, list(
-	"Chief Engineer",
-	"Station Engineer",
-	"Atmospheric Technician"))
-
-
-GLOBAL_LIST_INIT(medical_positions, list(
-	"Chief Medical Officer",
-	"Medical Doctor",
-	"Geneticist",
-	"Virologist",
-	"Chemist"))
-
-
-GLOBAL_LIST_INIT(science_positions, list(
-	"Research Director",
-	"Scientist",
-	"Roboticist"))
-
-
-GLOBAL_LIST_INIT(supply_positions, list(
-	"Head of Personnel",
-	"Quartermaster",
-	"Cargo Technician",
-	"Shaft Miner"))
-
-
-GLOBAL_LIST_INIT(civilian_positions, list(
-	"Bartender",
-	"Botanist",
-	"Cook",
-	"Janitor",
-	"Librarian",
-	"Lawyer",
-	"Chaplain",
-	"Clown",
-	"Mime",
-	"Assistant"))
-
-
-GLOBAL_LIST_INIT(security_positions, list(
-	"Head of Security",
-	"Warden",
-	"Detective",
-	"Security Officer"))
-
-
-GLOBAL_LIST_INIT(nonhuman_positions, list(
-	"AI",
-	"Cyborg",
-	"pAI"))
-
-
-/proc/guest_jobbans(job)
-	return ((job in GLOB.command_positions) || (job in GLOB.nonhuman_positions) || (job in GLOB.security_positions))
-
-
+// TO DO: Replace this with job datum flags instead.
+GLOBAL_LIST_INIT(exp_specialmap, list(
+	EXP_TYPE_LIVING = list(), // all living mobs
+	EXP_TYPE_ANTAG = list(),
+	EXP_TYPE_SPECIAL = list(
+		ROLE_LIFEBRINGER,
+		ROLE_ASHWALKER,
+		ROLE_EXILE,
+		ROLE_SERVANT_GOLEM,
+		ROLE_FREE_GOLEM,
+		ROLE_HERMIT,
+		ROLE_ESCAPED_PRISONER,
+		ROLE_HOTEL_STAFF,
+		ROLE_SPACE_SYNDICATE,
+		ROLE_ANCIENT_CREW,
+		ROLE_SPACE_DOCTOR,
+		ROLE_SPACE_BARTENDER,
+		ROLE_BEACH_BUM,
+		ROLE_SKELETON,
+		ROLE_ZOMBIE,
+		ROLE_SPACE_BAR_PATRON,
+		ROLE_LAVALAND_SYNDICATE,
+		ROLE_MAINTENANCE_DRONE,
+		ROLE_DERELICT_DRONE,
+		ROLE_SYNDICATE_DRONE,
+		ROLE_VENUSHUMANTRAP,
+		ROLE_GHOST_ROLE,
+		), // Ghost roles
+	EXP_TYPE_GHOST = list() // dead people, observers
+))
+GLOBAL_PROTECT(exp_specialmap)
 
 //this is necessary because antags happen before job datums are handed out, but NOT before they come into existence
 //so I can't simply use job datum.department_head straight from the mind datum, laaaaame.
-/proc/get_department_heads(var/job_title)
+/proc/get_department_heads(job_title)
 	if(!job_title)
 		return list()
 
-	for(var/datum/job/J in SSjob.occupations)
-		if(J.title == job_title)
-			return J.department_head //this is a list
+	for(var/datum/job/job as anything in SSjob.joinable_occupations)
+		if(job.title == job_title)
+			return job.department_head //this is a list
 
 /proc/get_full_job_name(job)
 	var/static/regex/cap_expand = new("cap(?!tain)")
@@ -91,7 +56,7 @@ GLOBAL_LIST_INIT(nonhuman_positions, list(
 	var/static/regex/chef_expand = new("chef")
 	var/static/regex/borg_expand = new("(?<!cy)borg")
 
-	job = lowertext(job)
+	job = LOWER_TEXT(job)
 	job = cap_expand.Replace(job, "captain")
 	job = cmo_expand.Replace(job, "chief medical officer")
 	job = hos_expand.Replace(job, "head of security")

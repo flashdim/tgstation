@@ -1,74 +1,160 @@
-#define DEBUG					//Enables byond profiling and full runtime logs - note, this may also be defined in your .dme file
-								//Enables in-depth debug messages to runtime log (used for debugging)
-//#define TESTING				//By using the testing("message") proc you can create debug-feedback for people with this
+//#define TESTING //By using the testing("message") proc you can create debug-feedback for people with this
 								//uncommented, but not visible in the release version)
 
-#ifdef TESTING
-//#define GC_FAILURE_HARD_LOOKUP	//makes paths that fail to GC call find_references before del'ing.
-									//Also allows for recursive reference searching of datums.
-									//Sets world.loop_checks to false and prevents find references from sleeping
+//#define DATUMVAR_DEBUGGING_MODE //Enables the ability to cache datum vars and retrieve later for debugging which vars changed.
 
-//#define VISUALIZE_ACTIVE_TURFS	//Highlights atmos active turfs in green
+// Comment this out if you are debugging problems that might be obscured by custom error handling in world/Error
+#ifdef DEBUG
+#define USE_CUSTOM_ERROR_HANDLER
 #endif
 
-#define PRELOAD_RSC	1			/*set to:
-								0 to allow using external resources or on-demand behaviour;
-								1 to use the default behaviour;
-								2 for preloading absolutely everything;
-								*/
+#ifdef TESTING
+#define DATUMVAR_DEBUGGING_MODE
 
-#define BACKGROUND_ENABLED 0    // The default value for all uses of set background. Set background can cause gradual lag and is recommended you only turn this on if necessary.
-								// 1 will enable set background. 0 will disable set background.
+/// Enables update_appearance "relevence" tracking
+/// This allows us to check which update_appearance procs are actually doing anything. Good thing to look in on once a year or so
+/// You'll need to run a two regexes/search and replaces to make it work
+/// First, one to convert type refs (PROC_REF.*)(update_appearance\)) -> $1_$2
+/// Second, one to convert definitions /update_appearance\( -> /_update_appearance(
+/// We'll use another define to convert uses of the proc over. That'll be all
+// #define APPEARANCE_SUCCESS_TRACKING
 
-//ADMIN STUFF
-#define ROUNDSTART_LOGOUT_REPORT_TIME	6000 //Amount of time (in deciseconds) after the rounds starts, that the player disconnect report is issued.
+///Used to find the sources of harddels, quite laggy, don't be surpised if it freezes your client for a good while
+//#define REFERENCE_TRACKING
+#ifdef REFERENCE_TRACKING
 
-#define SPAM_TRIGGER_WARNING	5	//Number of identical messages required before the spam-prevention will warn you to stfu
-#define SPAM_TRIGGER_AUTOMUTE	10	//Number of identical messages required before the spam-prevention will automute you
+///Used for doing dry runs of the reference finder, to test for feature completeness
+///Slightly slower, higher in memory. Just not optimal
+//#define REFERENCE_TRACKING_DEBUG
 
-//Don't set this very much higher then 1024 unless you like inviting people in to dos your server with message spam
-#define MAX_MESSAGE_LEN			1024
-#define MAX_NAME_LEN			42
-#define MAX_BROADCAST_LEN		512
-#define MAX_CHARTER_LEN			80
+///Run a lookup on things hard deleting by default.
+//#define GC_FAILURE_HARD_LOOKUP
+#ifdef GC_FAILURE_HARD_LOOKUP
+///Don't stop when searching, go till you're totally done
+#define FIND_REF_NO_CHECK_TICK
+#endif //ifdef GC_FAILURE_HARD_LOOKUP
 
-//MINOR TWEAKS/MISC
-#define AGE_MIN				17	//youngest a character can be
-#define AGE_MAX				85	//oldest a character can be
-#define SHOES_SLOWDOWN		0	//How much shoes slow you down by default. Negative values speed you up
-#define POCKET_STRIP_DELAY			40	//time taken (in deciseconds) to search somebody's pockets
-#define DOOR_CRUSH_DAMAGE	15	//the amount of damage that airlocks deal when they crush you
+#endif //ifdef REFERENCE_TRACKING
 
-#define	HUNGER_FACTOR		0.1	//factor at which mob nutrition decreases
-#define	REAGENTS_METABOLISM 0.4	//How many units of reagent are consumed per tick, by default.
-#define REAGENTS_EFFECT_MULTIPLIER (REAGENTS_METABOLISM / 0.4)	// By defining the effect multiplier this way, it'll exactly adjust all effects according to how they originally were with the 0.4 metabolism
+/*
+* Enables debug messages for every single reaction step. This is 1 message per 0.5s for a SINGLE reaction. Useful for tracking down bugs/asking me for help in the main reaction handiler (equilibrium.dm).
+*
+* * Requires TESTING to be defined to work.
+*/
+//#define REAGENTS_TESTING
 
-#define MAX_STACK_AMOUNT_METAL	50
-#define MAX_STACK_AMOUNT_GLASS	50
-#define MAX_STACK_AMOUNT_RODS	60
+// Displays static object lighting updates
+// Also enables some debug vars on sslighting that can be used to modify
+// How extensively we prune lighting corners to update
+#define VISUALIZE_LIGHT_UPDATES
 
-// AI Toggles
-#define AI_CAMERA_LUMINOSITY	5
-#define AI_VOX 1 // Comment out if you don't want VOX to be enabled and have players download the voice sounds.
+#define VISUALIZE_ACTIVE_TURFS //Highlights atmos active turfs in green
+#define TRACK_MAX_SHARE //Allows max share tracking, for use in the atmos debugging ui
+#endif //ifdef TESTING
+
+/// If this is uncommented, we set up the ref tracker to be used in a live environment
+/// And to log events to [log_dir]/harddels.log
+//#define REFERENCE_DOING_IT_LIVE
+#ifdef REFERENCE_DOING_IT_LIVE
+// compile the backend
+#define REFERENCE_TRACKING
+// actually look for refs
+#define GC_FAILURE_HARD_LOOKUP
+#endif // REFERENCE_DOING_IT_LIVE
+
+// If this is uncommented, we do a single run though of the game setup and tear down process with unit tests in between
+// #define UNIT_TESTS
+
+// If this is uncommented, will attempt to load and initialize prof.dll/libprof.so.
+// We do not ship byond-tracy. Build it yourself here: https://github.com/mafemergency/byond-tracy/
+// #define USE_BYOND_TRACY
+
+// If defined, we will compile with FULL timer debug info, rather then a limited scope
+// Be warned, this increases timer creation cost by 5x
+// #define TIMER_DEBUG
+
+// If defined, we will NOT defer asset generation till later in the game, and will instead do it all at once, during initiialize
+//#define DO_NOT_DEFER_ASSETS
+
+/// If this is uncommented, Autowiki will generate edits and shut down the server.
+/// Prefer the autowiki build target instead.
+// #define AUTOWIKI
+
+/// If this is uncommented, will profile mapload atom initializations
+// #define PROFILE_MAPLOAD_INIT_ATOM
+
+/// If this is uncommented, force our verb processing into just the 2% of a tick
+/// We normally reserve for it
+/// NEVER run this on live, it's for simulating highpop only
+// #define VERB_STRESS_TEST
+
+#ifdef VERB_STRESS_TEST
+/// Uncomment this to force all verbs to run into overtime all of the time
+/// Essentially negating the reserve 2%
+
+// #define FORCE_VERB_OVERTIME
+#warn Hey brother, you're running in LAG MODE.
+#warn IF YOU PUT THIS ON LIVE I WILL FIND YOU AND MAKE YOU WISH YOU WERE NEVE-
+#endif
+
+#ifndef PRELOAD_RSC //set to:
+#define PRELOAD_RSC 1 // 0 to allow using external resources or on-demand behaviour;
+#endif // 1 to use the default behaviour;
+								// 2 for preloading absolutely everything;
+
+#ifdef LOWMEMORYMODE
+#define FORCE_MAP "runtimestation"
+#define FORCE_MAP_DIRECTORY "_maps"
+#endif
 
 //Additional code for the above flags.
 #ifdef TESTING
 #warn compiling in TESTING mode. testing() debug messages will be visible.
 #endif
 
-#ifdef TRAVISTESTING
+#if defined(CIBUILDING) && !defined(OPENDREAM)
+#define UNIT_TESTS
+#endif
+
+#ifdef CITESTING
 #define TESTING
 #endif
 
-//Update this whenever you need to take advantage of more recent byond features
-#define MIN_COMPILER_VERSION 511
-#if DM_VERSION < MIN_COMPILER_VERSION
-//Don't forget to update this part
-#error Your version of BYOND is too out-of-date to compile this project. Go to byond.com/download and update.
-#error You need version 511 or higher
+#if defined(UNIT_TESTS)
+//Hard del testing defines
+#define REFERENCE_TRACKING
+#define REFERENCE_TRACKING_DEBUG
+#define FIND_REF_NO_CHECK_TICK
+#define GC_FAILURE_HARD_LOOKUP
+//Ensures all early assets can actually load early
+#define DO_NOT_DEFER_ASSETS
+//Test at full capacity, the extra cost doesn't matter
+#define TIMER_DEBUG
 #endif
 
+#ifdef TGS
+// TGS performs its own build of dm.exe, but includes a prepended TGS define.
+#define CBT
+#endif
 
-#ifndef SERVERTOOLS
-#define SERVERTOOLS 0
+#if defined(OPENDREAM)
+	#if !defined(CIBUILDING)
+		#warn You are building with OpenDream. Remember to build TGUI manually.
+		#warn You can do this by running tgui-build.cmd from the bin directory.
+	#endif
+#else
+	#if !defined(CBT) && !defined(SPACEMAN_DMM)
+		#warn Building with Dream Maker is no longer supported and will result in errors.
+		#warn In order to build, run BUILD.cmd in the root directory.
+		#warn Consider switching to VSCode editor instead, where you can press Ctrl+Shift+B to build.
+	#endif
+#endif
+
+/// Runs the game in "map test mode"
+/// Map test mode prevents common annoyances, such as rats from spawning and random light fixture breakage,
+/// so mappers can test important facets of their map (working powernet, atmos, good light coverage) without these interfering.
+// #define MAP_TEST
+
+#ifdef MAP_TEST
+#warn Compiling in MAP_TEST mode. Certain game mechanics will be disabled.
 #endif

@@ -1,110 +1,128 @@
-/obj/item/weapon/folder
+/obj/item/folder
 	name = "folder"
 	desc = "A folder."
-	icon = 'icons/obj/bureaucracy.dmi'
+	icon = 'icons/obj/service/bureaucracy.dmi'
 	icon_state = "folder"
 	w_class = WEIGHT_CLASS_SMALL
 	pressure_resistance = 2
 	resistance_flags = FLAMMABLE
+	/// The background color for tgui in hex (with a `#`)
+	var/bg_color = "#7f7f7f"
+	/// A typecache of the objects that can be inserted into a folder
+	var/static/list/folder_insertables = typecacheof(list(
+		/obj/item/paper,
+		/obj/item/photo,
+		/obj/item/documents,
+		/obj/item/paperwork,
+	))
+	/// Do we hide the contents on examine?
+	var/contents_hidden = FALSE
 
-/obj/item/weapon/folder/blue
-	desc = "A blue folder."
-	icon_state = "folder_blue"
+/obj/item/folder/suicide_act(mob/living/user)
+	user.visible_message(span_suicide("[user] begins filing an imaginary death warrant! It looks like [user.p_theyre()] trying to commit suicide!"))
+	return OXYLOSS
 
-/obj/item/weapon/folder/red
-	desc = "A red folder."
-	icon_state = "folder_red"
+/obj/item/folder/Initialize(mapload)
+	update_icon()
+	. = ..()
 
-/obj/item/weapon/folder/yellow
-	desc = "A yellow folder."
-	icon_state = "folder_yellow"
+/obj/item/folder/Destroy()
+	for(var/obj/important_thing in contents)
+		if(!(important_thing.resistance_flags & INDESTRUCTIBLE))
+			continue
+		important_thing.forceMove(drop_location()) //don't destroy round critical content such as objective documents.
+	return ..()
 
-/obj/item/weapon/folder/white
-	desc = "A white folder."
-	icon_state = "folder_white"
+/obj/item/folder/examine()
+	. = ..()
+	if(length(contents) && !contents_hidden)
+		. += span_notice("<b>Right-click</b> to remove [contents[1]].")
 
-
-/obj/item/weapon/folder/update_icon()
-	cut_overlays()
-	if(contents.len)
-		add_overlay("folder_paper")
-
-
-/obj/item/weapon/folder/attackby(obj/item/weapon/W, mob/user, params)
-	if(istype(W, /obj/item/weapon/paper) || istype(W, /obj/item/weapon/photo) || istype(W, /obj/item/documents))
-		if(!user.transferItemToLoc(W, src))
-			return
-		to_chat(user, "<span class='notice'>You put [W] into [src].</span>")
-		update_icon()
-	else if(istype(W, /obj/item/weapon/pen))
-		var/n_name = copytext(sanitize(input(user, "What would you like to label the folder?", "Folder Labelling", null) as text), 1, MAX_NAME_LEN)
-		if((in_range(src,user) && user.stat == CONSCIOUS))
-			name = "folder[(n_name ? " - '[n_name]'" : null)]"
-
-
-/obj/item/weapon/folder/attack_self(mob/user)
-	var/dat = "<title>[name]</title>"
-
-	for(var/obj/item/I in src)
-		dat += "<A href='?src=\ref[src];remove=\ref[I]'>Remove</A> - <A href='?src=\ref[src];read=\ref[I]'>[I.name]</A><BR>"
-	user << browse(dat, "window=folder")
-	onclose(user, "folder")
-	add_fingerprint(usr)
-
-
-/obj/item/weapon/folder/Topic(href, href_list)
-	..()
-	if(usr.stat || usr.restrained())
+/obj/item/folder/proc/rename(mob/user, obj/item/writing_instrument)
+	if(!user.can_write(writing_instrument))
 		return
 
-	if(usr.contents.Find(src))
+	var/inputvalue = tgui_input_text(user, "What would you like to label the folder?", "Folder Labelling", max_length = MAX_NAME_LEN)
 
-		if(href_list["remove"])
-			var/obj/item/I = locate(href_list["remove"])
-			if(istype(I) && I.loc == src)
-				I.loc = usr.loc
-				usr.put_in_hands(I)
+	if(!inputvalue)
+		return
 
-		if(href_list["read"])
-			var/obj/item/I = locate(href_list["read"])
-			if(istype(I) && I.loc == src)
-				usr.examinate(I)
+	if(user.can_perform_action(src))
+		name = "folder[(inputvalue ? " - '[inputvalue]'" : null)]"
 
-		//Update everything
-		attack_self(usr)
+/obj/item/folder/proc/remove_item(obj/item/Item, mob/user)
+	if(istype(Item))
+		Item.forceMove(user.loc)
+		user.put_in_hands(Item)
+		to_chat(user, span_notice("You remove [Item] from [src]."))
 		update_icon()
 
-/obj/item/weapon/folder/documents
-	name = "folder- 'TOP SECRET'"
-	desc = "A folder stamped \"Top Secret - Property of Nanotrasen Corporation. Unauthorized distribution is punishable by death.\""
+/obj/item/folder/attack_hand(mob/user, list/modifiers)
+	if(length(contents) && LAZYACCESS(modifiers, RIGHT_CLICK))
+		remove_item(contents[1], user)
+		return TRUE
+	. = ..()
 
-/obj/item/weapon/folder/documents/New()
-	..()
-	new /obj/item/documents/nanotrasen(src)
-	update_icon()
+/obj/item/folder/update_overlays()
+	. = ..()
+	if(contents.len)
+		. += "folder_paper"
 
-/obj/item/weapon/folder/syndicate
-	icon_state = "folder_syndie"
-	name = "folder- 'TOP SECRET'"
-	desc = "A folder stamped \"Top Secret - Property of The Syndicate.\""
+/obj/item/folder/attackby(obj/item/weapon, mob/user, params)
+	if(burn_paper_product_attackby_check(weapon, user))
+		return
+	if(is_type_in_typecache(weapon, folder_insertables))
+		//Add paper, photo or documents into the folder
+		if(!user.transferItemToLoc(weapon, src))
+			return
+		to_chat(user, span_notice("You put [weapon] into [src]."))
+		update_appearance()
+	else if(istype(weapon, /obj/item/pen))
+		rename(user, weapon)
 
-/obj/item/weapon/folder/syndicate/red
-	icon_state = "folder_sred"
+/obj/item/folder/attack_self(mob/user)
+	add_fingerprint(usr)
+	ui_interact(user)
+	return
 
-/obj/item/weapon/folder/syndicate/red/New()
-	..()
-	new /obj/item/documents/syndicate/red(src)
-	update_icon()
+/obj/item/folder/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "Folder")
+		ui.open()
 
-/obj/item/weapon/folder/syndicate/blue
-	icon_state = "folder_sblue"
+/obj/item/folder/ui_data(mob/user)
+	var/list/data = list()
+	if(istype(src, /obj/item/folder/syndicate))
+		data["theme"] = "syndicate"
+	data["bg_color"] = "[bg_color]"
+	data["folder_name"] = "[name]"
 
-/obj/item/weapon/folder/syndicate/blue/New()
-	..()
-	new /obj/item/documents/syndicate/blue(src)
-	update_icon()
+	data["contents"] = list()
+	data["contents_ref"] = list()
+	for(var/Content in src)
+		data["contents"] += "[Content]"
+		data["contents_ref"] += "[REF(Content)]"
 
-/obj/item/weapon/folder/syndicate/mining/New()
-	..()
-	new /obj/item/documents/syndicate/mining(src)
-	update_icon()
+	return data
+
+/obj/item/folder/ui_act(action, params)
+	. = ..()
+	if(.)
+		return
+
+	if(usr.stat != CONSCIOUS || HAS_TRAIT(usr, TRAIT_HANDS_BLOCKED))
+		return
+
+	switch(action)
+		// Take item out
+		if("remove")
+			var/obj/item/Item = locate(params["ref"]) in src
+			remove_item(Item, usr)
+			. = TRUE
+		// Inspect the item
+		if("examine")
+			var/obj/item/Item = locate(params["ref"]) in src
+			if(istype(Item))
+				usr.examinate(Item)
+				. = TRUE

@@ -3,9 +3,9 @@
 	weight = 0 //Badmin exclusive now because once it's expected its not funny
 	typepath = /datum/round_event/wizard/fake_explosion
 	max_occurrences = 1
-	earliest_start = 0
+	earliest_start = 0 MINUTES
+	description = "The nuclear explosion cutscene begins to play to scare the crew."
 
 /datum/round_event/wizard/fake_explosion/start()
-	for(var/mob/M in GLOB.player_list)
-		M << 'sound/machines/Alarm.ogg'
-	addtimer(CALLBACK(SSticker, /datum/controller/subsystem/ticker/.proc/station_explosion_cinematic, 1, "fake"), 100) //:o)
+	sound_to_playing_players('sound/machines/alarm.ogg')
+	addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(play_cinematic), /datum/cinematic/nuke/fake, world), 10 SECONDS)

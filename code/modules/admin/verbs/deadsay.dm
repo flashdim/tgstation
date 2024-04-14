@@ -1,32 +1,30 @@
-/client/proc/dsay(msg as text)
-	set category = "Special Verbs"
-	set name = "Dsay" //Gave this shit a shorter name so you only have to time out "dsay" rather than "dead say" to use it --NeoFite
-	set hidden = 1
-	if(!src.holder)
-		to_chat(src, "Only administrators may use this command.")
-		return
-	if(!src.mob)
-		return
-	if(prefs.muted & MUTE_DEADCHAT)
-		to_chat(src, "<span class='danger'>You cannot send DSAY messages (muted).</span>")
+
+ADMIN_VERB(dsay, R_NONE, "DSay", "Speak to the dead.", ADMIN_CATEGORY_GAME, message as text)
+	if(user.prefs.muted & MUTE_DEADCHAT)
+		to_chat(user, span_danger("You cannot send DSAY messages (muted)."), confidential = TRUE)
 		return
 
-	if (src.handle_spam_prevention(msg,MUTE_DEADCHAT))
+	if (user.handle_spam_prevention(message,MUTE_DEADCHAT))
 		return
 
-	msg = copytext(sanitize(msg), 1, MAX_MESSAGE_LEN)
-	log_dsay("[key_name(src)] : [msg]")
+	message = copytext_char(sanitize(message), 1, MAX_MESSAGE_LEN)
+	user.mob.log_talk(message, LOG_DSAY)
 
-	if (!msg)
+	if (!message)
 		return
-	var/nicknames = world.file2list("config/admin_nicknames.txt")
+	var/rank_name = user.holder.rank_names()
+	var/admin_name = user.key
+	if(user.holder.fakekey)
+		rank_name = pick(strings("admin_nicknames.json", "ranks", "config"))
+		admin_name = pick(strings("admin_nicknames.json", "names", "config"))
+	var/name_and_rank = "[span_tooltip(rank_name, "STAFF")] ([admin_name])"
 
-	var/rendered = "<span class='game deadsay'><span class='prefix'>DEAD:</span> <span class='name'>ADMIN([src.holder.fakekey ? pick(nicknames) : src.key])</span> says, <span class='message'>\"[msg]\"</span></span>"
+	deadchat_broadcast("[span_prefix("DEAD:")] [name_and_rank] says, <span class='message'>\"[emoji_parse(message)]\"</span>")
 
-	for (var/mob/M in GLOB.player_list)
-		if(isnewplayer(M))
-			continue
-		if (M.stat == DEAD || (M.client && M.client.holder && (M.client.prefs.chat_toggles & CHAT_DEAD))) //admins can toggle deadchat on and off. This is a proc in admin.dm and is only give to Administrators and above
-			M.show_message(rendered, 2)
+	BLACKBOX_LOG_ADMIN_VERB("Dsay")
 
-	SSblackbox.add_details("admin_verb","Dsay") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
+/client/proc/get_dead_say()
+	var/msg = input(src, null, "dsay \"text\"") as text|null
+	if (isnull(msg))
+		return
+	SSadmin_verbs.dynamic_invoke_verb(src, /datum/admin_verb/dsay, msg)

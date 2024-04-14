@@ -1,104 +1,88 @@
-/*
-	The bus mainframe idles and waits for hubs to relay them signals. They act
-	as junctions for the network.
-
-	They transfer uncompressed subspace packets to processor units, and then take
-	the processed packet to a server for logging.
-
-	Link to a subspace hub if it can't send to a server.
-*/
-
+/**
+ * The bus mainframe idles and waits for hubs to relay them signals. They act
+ * as junctions for the network.
+ *
+ * They transfer uncompressed subspace packets to processor units, and then take
+ * the processed packet to a server for logging.
+ *
+ * Can be linked to a telecommunications hub or a broadcaster in the absence
+ * of a server, at the cost of some added latency.
+ */
 /obj/machinery/telecomms/bus
 	name = "bus mainframe"
 	icon_state = "bus"
 	desc = "A mighty piece of hardware used to send massive amounts of data quickly."
-	density = 1
-	anchored = 1
-	use_power = 1
-	idle_power_usage = 50
-	machinetype = 2
-	//heatgen = 20
+	telecomms_type = /obj/machinery/telecomms/bus
+	density = TRUE
+	idle_power_usage = BASE_MACHINE_IDLE_CONSUMPTION * 0.01
 	netspeed = 40
-	var/change_frequency = 0
+	circuit = /obj/item/circuitboard/machine/telecomms/bus
+	/// The frequency this bus will use to override the received signal's frequency,
+	/// if not `NONE`.
+	var/change_frequency = NONE
 
-/obj/machinery/telecomms/bus/receive_information(datum/signal/signal, obj/machinery/telecomms/machine_from)
+/obj/machinery/telecomms/bus/receive_information(datum/signal/subspace/signal, obj/machinery/telecomms/machine_from)
+	if(!istype(signal) || !is_freq_listening(signal))
+		return
 
-	if(is_freq_listening(signal))
-		if(change_frequency)
-			if(signal.frequency != GLOB.SYND_FREQ)
-				signal.frequency = change_frequency
+	if(change_frequency && !(signal.frequency in banned_frequencies))
+		signal.frequency = change_frequency
 
-		if(!istype(machine_from, /obj/machinery/telecomms/processor) && machine_from != src) // Signal must be ready (stupid assuming machine), let's send it
-			// send to one linked processor unit
-			var/send_to_processor = relay_information(signal, "/obj/machinery/telecomms/processor")
+	if(!istype(machine_from, /obj/machinery/telecomms/processor) && machine_from != src) // Signal must be ready (stupid assuming machine), let's send it
+		// send to one linked processor unit
+		if(relay_information(signal, /obj/machinery/telecomms/processor))
+			return
 
-			if(send_to_processor)
-				return
-			// failed to send to a processor, relay information anyway
-			signal.data["slow"] += rand(1, 5) // slow the signal down only slightly
-			src.receive_information(signal, src)
+		// failed to send to a processor, relay information anyway
+		signal.data["slow"] += rand(1, 5) // slow the signal down only slightly
 
-		// Try sending it!
-		var/list/try_send = list("/obj/machinery/telecomms/server", "/obj/machinery/telecomms/hub", "/obj/machinery/telecomms/broadcaster", "/obj/machinery/telecomms/bus")
-		var/i = 0
-		for(var/send in try_send)
-			if(i)
-				signal.data["slow"] += rand(0, 1) // slow the signal down only slightly
-			i++
-			var/can_send = relay_information(signal, send)
-			if(can_send)
-				break
+	// Try sending it!
+	var/list/try_send = list(signal.server_type, /obj/machinery/telecomms/hub, /obj/machinery/telecomms/broadcaster)
 
-/obj/machinery/telecomms/bus/New()
-	..()
-	var/obj/item/weapon/circuitboard/machine/B = new /obj/item/weapon/circuitboard/machine/telecomms/bus(null)
-	B.apply_default_parts(src)
+	var/i = 0
+	for(var/send in try_send)
+		if(i)
+			signal.data["slow"] += rand(0, 1) // slow the signal down only slightly
+		i++
+		if(relay_information(signal, send))
+			break
 
-/obj/item/weapon/circuitboard/machine/telecomms/bus
-	name = "Bus Mainframe (Machine Board)"
-	build_path = /obj/machinery/telecomms/bus
-	origin_tech = "programming=2;engineering=2"
-	req_components = list(
-							/obj/item/weapon/stock_parts/manipulator = 2,
-							/obj/item/stack/cable_coil = 1,
-							/obj/item/weapon/stock_parts/subspace/filter = 1)
+	use_energy(idle_power_usage)
 
-
-
-
-
-//Preset Buses
+// Preset Buses
 
 /obj/machinery/telecomms/bus/preset_one
 	id = "Bus 1"
 	network = "tcommsat"
-	freq_listening = list(GLOB.SCI_FREQ, GLOB.MED_FREQ)
+	freq_listening = list(FREQ_SCIENCE, FREQ_MEDICAL)
 	autolinkers = list("processor1", "science", "medical")
 
 /obj/machinery/telecomms/bus/preset_two
 	id = "Bus 2"
 	network = "tcommsat"
-	freq_listening = list(GLOB.SUPP_FREQ,GLOB.SERV_FREQ)
+	freq_listening = list(FREQ_SUPPLY, FREQ_SERVICE)
 	autolinkers = list("processor2", "supply", "service")
 
 /obj/machinery/telecomms/bus/preset_three
 	id = "Bus 3"
 	network = "tcommsat"
-	freq_listening = list(GLOB.SEC_FREQ, GLOB.COMM_FREQ)
+	freq_listening = list(FREQ_SECURITY, FREQ_COMMAND)
 	autolinkers = list("processor3", "security", "command")
 
 /obj/machinery/telecomms/bus/preset_four
 	id = "Bus 4"
 	network = "tcommsat"
-	freq_listening = list(GLOB.ENG_FREQ)
-	autolinkers = list("processor4", "engineering", "common")
+	freq_listening = list(FREQ_ENGINEERING)
+	autolinkers = list("processor4", "engineering", "common", "messaging")
 
-/obj/machinery/telecomms/bus/preset_four/New()
-	for(var/i = 1441, i < 1489, i += 2)
+/obj/machinery/telecomms/bus/preset_four/Initialize(mapload)
+	. = ..()
+	// We want to include every freely-available frequency on this one, so they
+	// get processed quickly when used on-station.
+	for(var/i = MIN_FREQ, i <= MAX_FREQ, i += 2)
 		freq_listening |= i
-	..()
 
 /obj/machinery/telecomms/bus/preset_one/birdstation
 	name = "Bus"
-	autolinkers = list("processor1", "common")
+	autolinkers = list("processor1", "common", "messaging")
 	freq_listening = list()

@@ -1,131 +1,73 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
 "a" = (
-/turf/open/floor/plating/asteroid/basalt/lava_land_surface,
+/turf/open/misc/asteroid/basalt/lava_land_surface,
 /area/lavaland/surface/outdoors)
 "b" = (
 /turf/closed/mineral/volcanic/lava_land_surface,
 /area/lavaland/surface/outdoors)
 "c" = (
-/turf/open/floor/plating/lava/smooth/lava_land_surface,
+/turf/open/lava/smooth/lava_land_surface,
 /area/lavaland/surface/outdoors)
 "d" = (
-/turf/closed/wall/rust{
-	baseturf = /turf/open/floor/plating/lava/smooth
-	},
+/turf/closed/wall/rust,
 /area/ruin/unpowered)
 "e" = (
-/obj/structure/mirror{
-	desc = "This mirror has been shattered. It looks like the bad luck energies spilling from it are taking immediate effect on your surroundings!";
-	icon_state = "mirror_broke";
-	pixel_x = -28;
-	broken = 1
-	},
+/obj/structure/mirror/directional/west,
 /obj/item/clothing/suit/hooded/bloated_human,
 /obj/effect/decal/cleanable/blood,
-/turf/open/floor/plating{
-	baseturf = /turf/open/floor/plating/lava/smooth
-	},
+/turf/open/floor/plating,
 /area/ruin/unpowered)
 "f" = (
-/obj/structure/mirror{
-	desc = "Oh no, seven years of bad luck!";
-	icon_state = "mirror_broke";
-	pixel_x = 28;
-	broken = 1
-	},
-/turf/open/floor/plating{
-	baseturf = /turf/open/floor/plating/lava/smooth;
-	icon_state = "panelscorched"
-	},
+/obj/structure/mirror/broken/directional/east,
+/obj/effect/mapping_helpers/burnt_floor,
+/turf/open/floor/plating,
 /area/ruin/unpowered)
 "g" = (
 /obj/effect/decal/cleanable/blood/tracks,
-/obj/structure/mirror{
-	desc = "This mirror has been shattered. It looks like the bad luck energies spilling from it are taking immediate effect on your surroundings!";
-	icon_state = "mirror_broke";
-	pixel_x = -28;
-	broken = 1
-	},
-/turf/open/floor/plating{
-	baseturf = /turf/open/floor/plating/lava/smooth
-	},
+/obj/structure/mirror/directional/west,
+/turf/open/floor/plating,
 /area/ruin/unpowered)
 "h" = (
 /obj/effect/decal/cleanable/blood,
-/turf/open/floor/plating{
-	baseturf = /turf/open/floor/plating/lava/smooth
-	},
+/turf/open/floor/plating,
 /area/ruin/unpowered)
 "i" = (
-/turf/open/floor/plating{
-	baseturf = /turf/open/floor/plating/lava/smooth
-	},
+/turf/open/floor/plating,
 /area/ruin/unpowered)
 "j" = (
 /obj/effect/decal/cleanable/blood/splatter,
-/turf/open/floor/plating{
-	baseturf = /turf/open/floor/plating/lava/smooth
-	},
+/turf/open/floor/plating,
 /area/ruin/unpowered)
 "k" = (
-/obj/structure/mirror{
-	icon_state = "mirror_broke";
-	pixel_y = 28;
-	broken = 1
-	},
-/obj/item/weapon/kitchen/knife/envy,
-/turf/open/floor/plating{
-	baseturf = /turf/open/floor/plating/lava/smooth
-	},
+/obj/structure/mirror/broken/directional/north,
+/obj/item/knife/envy,
+/turf/open/floor/plating,
 /area/ruin/unpowered)
 "l" = (
-/obj/structure/mirror{
-	desc = "Oh no, seven years of bad luck!";
-	icon_state = "mirror_broke";
-	pixel_x = 28;
-	broken = 1
-	},
-/turf/open/floor/plating{
-	baseturf = /turf/open/floor/plating/lava/smooth
-	},
+/obj/structure/mirror/broken/directional/east,
+/turf/open/floor/plating,
 /area/ruin/unpowered)
 "m" = (
-/obj/structure/mirror{
-	desc = "This mirror has been shattered. It looks like the bad luck energies spilling from it are taking immediate effect on your surroundings!";
-	icon_state = "mirror_broke";
-	pixel_x = -28;
-	broken = 1
-	},
-/turf/open/floor/plating{
-	baseturf = /turf/open/floor/plating/lava/smooth
-	},
+/obj/structure/mirror/directional/west,
+/turf/open/floor/plating,
 /area/ruin/unpowered)
 "n" = (
-/turf/open/floor/plating{
-	baseturf = /turf/open/floor/plating/lava/smooth;
-	broken = 1;
-	icon_state = "platingdmg2"
-	},
+/obj/effect/mapping_helpers/broken_floor,
+/turf/open/floor/plating,
 /area/ruin/unpowered)
 "o" = (
-/obj/structure/mirror{
-	desc = "This mirror has been shattered. It looks like the bad luck energies spilling from it are taking immediate effect on your surroundings!";
-	icon_state = "mirror_broke";
-	pixel_x = -28;
-	broken = 1
-	},
-/turf/open/floor/plating{
-	baseturf = /turf/open/floor/plating/lava/smooth;
-	broken = 1;
-	icon_state = "platingdmg1"
-	},
+/obj/structure/mirror/directional/west,
+/obj/effect/mapping_helpers/broken_floor,
+/turf/open/floor/plating,
 /area/ruin/unpowered)
 "p" = (
 /obj/machinery/door/airlock/hatch,
-/turf/open/floor/plating{
-	baseturf = /turf/open/floor/plating/lava/smooth
-	},
+/turf/open/floor/plating,
 /area/ruin/unpowered)
+"A" = (
+/obj/effect/mapping_helpers/no_lava,
+/turf/open/misc/asteroid/basalt/lava_land_surface,
+/area/lavaland/surface/outdoors)
 
 (1,1,1) = {"
 a
@@ -234,7 +176,7 @@ i
 i
 i
 d
-a
+A
 a
 "}
 (6,1,1) = {"
@@ -256,7 +198,7 @@ i
 i
 i
 p
-a
+A
 a
 "}
 (7,1,1) = {"

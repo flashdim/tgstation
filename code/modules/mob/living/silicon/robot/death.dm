@@ -1,32 +1,35 @@
 
 /mob/living/silicon/robot/gib_animation()
-	new /obj/effect/overlay/temp/gib_animation(loc, "gibbed-r")
+	new /obj/effect/temp_visual/gib_animation(loc, "gibbed-r")
 
-/mob/living/silicon/robot/dust()
-	if(mmi)
-		qdel(mmi)
-	..()
+/mob/living/silicon/robot/dust(just_ash, drop_items, force)
+	// You do not get MMI'd if you are dusted
+	QDEL_NULL(mmi)
+	return ..()
 
 /mob/living/silicon/robot/spawn_dust()
 	new /obj/effect/decal/remains/robot(loc)
 
 /mob/living/silicon/robot/dust_animation()
-	new /obj/effect/overlay/temp/dust_animation(loc, "dust-r")
+	new /obj/effect/temp_visual/dust_animation(loc, "dust-r")
 
 /mob/living/silicon/robot/death(gibbed)
 	if(stat == DEAD)
 		return
-
+	if(gibbed)
+		dump_into_mmi()
+	else
+		logevent("FATAL -- SYSTEM HALT")
+		modularInterface.shutdown_computer()
 	. = ..()
 
-	locked = 0 //unlock cover
+	locked = FALSE //unlock cover
 
-	update_canmove()
-	if(camera && camera.status)
-		camera.toggle_cam(src,0)
-	update_headlamp(1) //So borg lights are disabled when killed.
+	if(!QDELETED(builtInCamera) && builtInCamera.camera_enabled)
+		builtInCamera.toggle_cam(src,0)
+	toggle_headlamp(TRUE) //So borg lights are disabled when killed.
 
-	uneq_all() // particularly to ensure sight modes are cleared
+	drop_all_held_items() // particularly to ensure sight modes are cleared
 
 	update_icons()
 

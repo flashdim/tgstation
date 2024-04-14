@@ -7,132 +7,66 @@
 // Items
 //
 
-/obj/item/weapon/holo
-	damtype = STAMINA
-
-/obj/item/weapon/holo/esword
+/obj/item/melee/energy/sword/holographic
 	name = "holographic energy sword"
-	desc = "May the force be with you. Sorta"
-	icon_state = "sword0"
-	force = 3.0
+	desc = "May the force be with you. Sorta."
+	damtype = STAMINA
 	throw_speed = 2
-	throw_range = 5
+	block_chance = 0
 	throwforce = 0
-	w_class = WEIGHT_CLASS_SMALL
-	hitsound = "swing_hit"
-	armour_penetration = 50
-	var/active = 0
+	embedding = null
+	sword_color_icon = null
 
-/obj/item/weapon/holo/esword/green/New()
-	..()
-	item_color = "green"
+	active_throwforce = 0
+	active_sharpness = NONE
+	active_heat = 0
 
+/obj/item/melee/energy/sword/holographic/Initialize(mapload)
+	. = ..()
+	if(!sword_color_icon)
+		sword_color_icon = pick("red", "blue", "green", "purple")
 
-/obj/item/weapon/holo/esword/red/New()
-	..()
-	item_color = "red"
+/obj/item/melee/energy/sword/holographic/green
+	sword_color_icon = "green"
 
-/obj/item/weapon/holo/esword/hit_reaction(mob/living/carbon/human/owner, attack_text, final_block_chance)
-	if(active)
-		return ..()
-	return 0
+/obj/item/melee/energy/sword/holographic/red
+	sword_color_icon = "red"
 
-/obj/item/weapon/holo/esword/attack(target as mob, mob/user as mob)
-	..()
+/obj/item/toy/cards/deck/syndicate/holographic
+	desc = "A deck of holographic playing cards."
 
-/obj/item/weapon/holo/esword/New()
-	item_color = pick("red","blue","green","purple")
-	..()
+/obj/item/toy/cards/deck/syndicate/holographic/Initialize(mapload, obj/machinery/computer/holodeck/holodeck)
+	src.holodeck = holodeck
+	RegisterSignal(src, COMSIG_QDELETING, PROC_REF(handle_card_delete))
+	. = ..()
 
-/obj/item/weapon/holo/esword/attack_self(mob/living/user as mob)
-	active = !active
-	if (active)
-		force = 30
-		icon_state = "sword[item_color]"
-		w_class = WEIGHT_CLASS_BULKY
-		hitsound = 'sound/weapons/blade1.ogg'
-		playsound(user, 'sound/weapons/saberon.ogg', 20, 1)
-		to_chat(user, "<span class='warning'>[src] is now active.</span>")
-	else
-		force = 3
-		icon_state = "sword0"
-		w_class = WEIGHT_CLASS_SMALL
-		hitsound = "swing_hit"
-		playsound(user, 'sound/weapons/saberoff.ogg', 20, 1)
-		to_chat(user, "<span class='warning'>[src] can now be concealed.</span>")
-	return
+/obj/item/toy/cards/deck/syndicate/holographic/proc/handle_card_delete(datum/source)
+	SIGNAL_HANDLER
 
-//BASKETBALL OBJECTS
+	//if any REAL cards have been inserted into the deck they are moved outside before destroying it
+	for(var/obj/item/toy/singlecard/card in card_atoms)
+		if(card.flags_1 & HOLOGRAM_1)
+			continue
+		card_atoms -= card
+		card.forceMove(drop_location())
 
-/obj/item/toy/beach_ball/holoball
-	name = "basketball"
-	icon = 'icons/obj/items.dmi'
-	icon_state = "basketball"
-	item_state = "basketball"
-	desc = "Here's your chance, do your dance at the Space Jam."
+/obj/item/toy/dodgeball
+	name = "dodgeball"
+	icon = 'icons/obj/toys/balls.dmi'
+	icon_state = "dodgeball"
+	inhand_icon_state = "dodgeball"
+	desc = "Used for playing the most violent and degrading of childhood games."
 	w_class = WEIGHT_CLASS_BULKY //Stops people from hiding it in their bags/pockets
 
-/obj/item/toy/beach_ball/holoball/dodgeball
-	name = "dodgeball"
-	icon_state = "dodgeball"
-	item_state = "dodgeball"
-	desc = "Used for playing the most violent and degrading of childhood games."
-
-/obj/item/toy/beach_ball/holoball/dodgeball/throw_impact(atom/hit_atom)
+/obj/item/toy/dodgeball/throw_impact(atom/hit_atom, datum/thrownthing/throwingdatum)
 	..()
 	if((ishuman(hit_atom)))
 		var/mob/living/carbon/M = hit_atom
-		playsound(src, 'sound/items/dodgeball.ogg', 50, 1)
+		playsound(src, 'sound/items/dodgeball.ogg', 50, TRUE)
 		M.apply_damage(10, STAMINA)
 		if(prob(5))
-			M.Weaken(3)
-			visible_message("<span class='danger'>[M] is knocked right off [M.p_their()] feet!</span>")
-
-//
-// Structures
-//
-
-/obj/structure/holohoop
-	name = "basketball hoop"
-	desc = "Boom, shakalaka!"
-	icon = 'icons/obj/basketball.dmi'
-	icon_state = "hoop"
-	anchored = 1
-	density = 1
-
-/obj/structure/holohoop/attackby(obj/item/weapon/W as obj, mob/user as mob, params)
-	if(get_dist(src,user)<2)
-		if(user.drop_item(src))
-			visible_message("<span class='warning'> [user] dunks [W] into \the [src]!</span>")
-
-/obj/structure/holohoop/attack_hand(mob/user)
-	if(user.pulling && user.a_intent == INTENT_GRAB && isliving(user.pulling))
-		var/mob/living/L = user.pulling
-		if(user.grab_state < GRAB_AGGRESSIVE)
-			to_chat(user, "<span class='warning'>You need a better grip to do that!</span>")
-			return
-		L.loc = src.loc
-		L.Weaken(5)
-		visible_message("<span class='danger'>[user] dunks [L] into \the [src]!</span>")
-		user.stop_pulling()
-	else
-		..()
-
-/obj/structure/holohoop/CanPass(atom/movable/mover, turf/target, height=0)
-	if (istype(mover,/obj/item) && mover.throwing)
-		var/obj/item/I = mover
-		if(istype(I, /obj/item/projectile))
-			return
-		if(prob(50))
-			I.forceMove(get_turf(src))
-			visible_message("<span class='warning'>Swish! [I] lands in [src].</span>")
-		else
-			visible_message("<span class='danger'>[I] bounces off of [src]'s rim!</span>")
-		return 0
-	else
-		return ..()
-
-
+			M.Paralyze(60)
+			visible_message(span_danger("[M] is knocked right off [M.p_their()] feet!"))
 
 //
 // Machines
@@ -141,81 +75,95 @@
 /obj/machinery/readybutton
 	name = "ready declaration device"
 	desc = "This device is used to declare ready. If all devices in an area are ready, the event will begin!"
-	icon = 'icons/obj/monitors.dmi'
+	icon = 'icons/obj/machines/wallmounts.dmi'
 	icon_state = "auth_off"
 	var/ready = 0
 	var/area/currentarea = null
-	var/eventstarted = 0
+	var/eventstarted = FALSE
 
-	anchored = 1.0
-	use_power = 1
-	idle_power_usage = 2
-	active_power_usage = 6
-	power_channel = ENVIRON
+	idle_power_usage = BASE_MACHINE_IDLE_CONSUMPTION * 0.02
+	active_power_usage = BASE_MACHINE_ACTIVE_CONSUMPTION * 0.006
+	power_channel = AREA_USAGE_ENVIRON
 
-/obj/machinery/readybutton/attack_ai(mob/user as mob)
-	to_chat(user, "The station AI is not to interact with these devices")
+/obj/machinery/readybutton/attack_ai(mob/user)
+	to_chat(user, span_warning("The station AI is not to interact with these devices!"))
 	return
 
-/obj/machinery/readybutton/attack_paw(mob/user as mob)
-	to_chat(user, "<span class='warning'>You are too primitive to use this device!</span>")
+/obj/machinery/readybutton/attack_paw(mob/user, list/modifiers)
+	to_chat(user, span_warning("You are too primitive to use this device!"))
 	return
 
-/obj/machinery/readybutton/attackby(obj/item/weapon/W as obj, mob/user as mob, params)
-	to_chat(user, "The device is a solid button, there's nothing you can do with it!")
+/obj/machinery/readybutton/attackby(obj/item/W, mob/user, params)
+	to_chat(user, span_warning("The device is a solid button, there's nothing you can do with it!"))
 
-/obj/machinery/readybutton/attack_hand(mob/user as mob)
-	if(user.stat || stat & (NOPOWER|BROKEN))
-		to_chat(user, "<span class='warning'>This device is not powered!</span>")
+/obj/machinery/readybutton/attack_hand(mob/user, list/modifiers)
+	. = ..()
+	if(.)
+		return
+	if(machine_stat & (NOPOWER|BROKEN))
+		to_chat(user, span_warning("This device is not powered!"))
 		return
 
-	currentarea = get_area(src.loc)
-	if(!currentarea)
+	currentarea = get_area(src)
+	if(isnull(currentarea))
 		qdel(src)
+		return
 
 	if(eventstarted)
-		to_chat(usr, "<span class='warning'>The event has already begun!</span>")
+		to_chat(usr, span_warning("The event has already begun!"))
 		return
 
 	ready = !ready
 
-	update_icon()
+	update_appearance()
 
 	var/numbuttons = 0
 	var/numready = 0
-	for(var/obj/machinery/readybutton/button in currentarea)
-		numbuttons++
-		if (button.ready)
-			numready++
+	for (var/list/zlevel_turfs as anything in currentarea.get_zlevel_turf_lists())
+		for (var/turf/area_turf as anything in zlevel_turfs)
+			for(var/obj/machinery/readybutton/button in area_turf)
+				numbuttons++
+				if(button.ready)
+					numready++
 
 	if(numbuttons == numready)
 		begin_event()
 
-/obj/machinery/readybutton/update_icon()
-	if(ready)
-		icon_state = "auth_on"
-	else
-		icon_state = "auth_off"
+/obj/machinery/readybutton/update_icon_state()
+	icon_state = "auth_[ready ? "on" : "off"]"
+	return ..()
 
 /obj/machinery/readybutton/proc/begin_event()
 
-	eventstarted = 1
+	eventstarted = TRUE
 
-	for(var/obj/structure/window/W in currentarea)
-		if(W.flags&NODECONSTRUCT) // Just in case: only holo-windows
-			qdel(W)
+	for (var/list/zlevel_turfs as anything in currentarea.get_zlevel_turf_lists())
+		for(var/turf/area_turf as anything in zlevel_turfs)
+			for(var/obj/structure/window/barrier in area_turf)
+				if(barrier.flags_1 & HOLOGRAM_1)// Just in case: only holo-windows
+					qdel(barrier)
 
-	for(var/mob/M in currentarea)
-		to_chat(M, "FIGHT!")
+			for(var/mob/contestant in area_turf)
+				to_chat(contestant, span_userdanger("FIGHT!"))
 
 /obj/machinery/conveyor/holodeck
 
 /obj/machinery/conveyor/holodeck/attackby(obj/item/I, mob/user, params)
-	if(user.drop_item())
-		I.loc = src.loc
-	else
+	if(!user.transferItemToLoc(I, drop_location()))
 		return ..()
 
-/obj/item/weapon/paper/trek_diploma
+/obj/item/paper/fluff/holodeck/trek_diploma
 	name = "paper - Starfleet Academy Diploma"
-	info = {"<h2>Starfleet Academy</h2></br><p>Official Diploma</p></br>"}
+	default_raw_text = {"<h2>Starfleet Academy</h2></br><p>Official Diploma</p></br>"}
+
+/obj/item/paper/fluff/holodeck/disclaimer
+	name = "Holodeck Disclaimer"
+	default_raw_text = "Bruises sustained in the holodeck can be healed simply by sleeping."
+
+/obj/vehicle/ridden/scooter/skateboard/pro/holodeck
+	name = "holographic skateboard"
+	desc = "A holographic copy of the EightO brand professional skateboard."
+	instability = 6
+
+/obj/vehicle/ridden/scooter/skateboard/pro/holodeck/pick_up_board() //picking up normal skateboards spawned in the holodeck gets rid of the holo flag, now you cant pick them up.
+	return

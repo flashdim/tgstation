@@ -3,9 +3,23 @@
 //Effects are mostly temporary visual effects like sparks, smoke, as well as decals, etc...
 /obj/effect
 	icon = 'icons/effects/effects.dmi'
-	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
+	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF | FREEZE_PROOF
+	move_resist = INFINITY
+	obj_flags = NONE
+	blocks_emissive = EMISSIVE_BLOCK_GENERIC
+	uses_integrity = FALSE
 
-/obj/effect/attackby(obj/item/I, mob/living/user, params)
+/obj/effect/attackby(obj/item/weapon, mob/user, params)
+	if(SEND_SIGNAL(weapon, COMSIG_ITEM_ATTACK_EFFECT, src, user, params) & COMPONENT_NO_AFTERATTACK)
+		return TRUE
+
+	// I'm not sure why these are snowflaked to early return but they are
+	if(istype(weapon, /obj/item/mop) || istype(weapon, /obj/item/soap))
+		return
+
+	return ..()
+
+/obj/effect/attack_generic(mob/user, damage_amount, damage_type, damage_flag, sound_effect, armor_penetration)
 	return
 
 /obj/effect/take_damage(damage_amount, damage_type = BRUTE, damage_flag = 0, sound_effect = 1, attack_dir)
@@ -15,46 +29,38 @@
 	return
 
 /obj/effect/acid_act()
+	return FALSE
+
+/obj/effect/blob_act(obj/structure/blob/B)
 	return
 
-/obj/effect/mech_melee_attack(obj/mecha/M)
-	return 0
-
-/obj/effect/blob_act()
-	return
-
-/obj/effect/attack_hulk(mob/living/carbon/human/user, does_attack_animation = 0)
-	return 0
+/obj/effect/attack_hulk(mob/living/carbon/human/user)
+	return FALSE
 
 /obj/effect/experience_pressure_difference()
 	return
 
 /obj/effect/ex_act(severity, target)
-	if(target == src)
-		qdel(src)
-	else
-		switch(severity)
-			if(1)
-				qdel(src)
-			if(2)
-				if(prob(60))
-					qdel(src)
-			if(3)
-				if(prob(25))
-					qdel(src)
+	return FALSE
 
 /obj/effect/singularity_act()
 	qdel(src)
-	return 0
 
-/obj/effect/ConveyorMove()
-	return
-
-/obj/effect/abstract/ex_act(severity, target)
-	return
+///The abstract effect ignores even more effects and is often typechecked for atoms that should truly not be fucked with.
+/obj/effect/abstract
+	resistance_flags = parent_type::resistance_flags | SHUTTLE_CRUSH_PROOF
 
 /obj/effect/abstract/singularity_pull()
 	return
 
 /obj/effect/abstract/singularity_act()
+	return
+
+/obj/effect/abstract/has_gravity(turf/gravity_turf)
+	return FALSE
+
+/obj/effect/dummy/singularity_pull()
+	return
+
+/obj/effect/dummy/singularity_act()
 	return

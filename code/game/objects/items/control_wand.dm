@@ -1,24 +1,30 @@
-#define WAND_OPEN "Open Door"
-#define WAND_BOLT "Toggle Bolts"
-#define WAND_EMERGENCY "Toggle Emergency Access"
+#define WAND_OPEN "open"
+#define WAND_BOLT "bolt"
+#define WAND_EMERGENCY "emergency"
 
-/obj/item/weapon/door_remote
-	icon_state = "gangtool-white"
-	item_state = "electronic"
-	icon = 'icons/obj/device.dmi'
+/obj/item/door_remote
+	icon_state = "remote"
+	base_icon_state = "remote"
+	inhand_icon_state = "electronic"
+	lefthand_file = 'icons/mob/inhands/items/devices_lefthand.dmi'
+	righthand_file = 'icons/mob/inhands/items/devices_righthand.dmi'
+	icon = 'icons/obj/devices/remote.dmi'
 	name = "control wand"
-	desc = "Remotely controls airlocks."
+	desc = "A remote for controlling a set of airlocks."
 	w_class = WEIGHT_CLASS_TINY
+
+	var/department = "civilian"
 	var/mode = WAND_OPEN
-	var/region_access = 1 //See access.dm
-	var/obj/item/weapon/card/id/ID
+	var/region_access = REGION_GENERAL
+	var/list/access_list
 
-/obj/item/weapon/door_remote/New()
-	..()
-	ID = new /obj/item/weapon/card/id
-	ID.access = get_region_accesses(region_access)
+/obj/item/door_remote/Initialize(mapload)
+	. = ..()
+	access_list = SSid_access.get_region_access_list(list(region_access))
+	update_icon_state()
 
-/obj/item/weapon/door_remote/attack_self(mob/user)
+/obj/item/door_remote/attack_self(mob/user)
+	var/static/list/desc = list(WAND_OPEN = "Open Door", WAND_BOLT = "Toggle Bolts", WAND_EMERGENCY = "Toggle Emergency Access")
 	switch(mode)
 		if(WAND_OPEN)
 			mode = WAND_BOLT
@@ -26,78 +32,118 @@
 			mode = WAND_EMERGENCY
 		if(WAND_EMERGENCY)
 			mode = WAND_OPEN
-	to_chat(user, "Now in mode: [mode].")
+	update_icon_state()
+	balloon_alert(user, "mode: [desc[mode]]")
 
-/obj/item/weapon/door_remote/afterattack(obj/machinery/door/airlock/D, mob/user)
-	if(!istype(D))
-		return
-	if(!(D.hasPower()))
-		to_chat(user, "<span class='danger'>[D] has no power!</span>")
-		return
-	if(!D.requiresID())
-		to_chat(user, "<span class='danger'>[D]'s ID scan is disabled!</span>")
-		return
-	if(D.check_access(ID) && D.canAIControl(user))
-		switch(mode)
-			if(WAND_OPEN)
-				if(D.density)
-					D.open()
-				else
-					D.close()
-			if(WAND_BOLT)
-				if(D.locked)
-					D.unbolt()
-				else
-					D.bolt()
-			if(WAND_EMERGENCY)
-				if(D.emergency)
-					D.emergency = 0
-				else
-					D.emergency = 1
-				D.update_icon()
+// Airlock remote works by sending NTNet packets to whatever it's pointed at.
+/obj/item/door_remote/afterattack(atom/target, mob/user)
+	. = ..()
+
+	var/obj/machinery/door/door
+
+	if (istype(target, /obj/machinery/door))
+		door = target
+
+		if (!door.opens_with_door_remote)
+			return
 	else
-		to_chat(user, "<span class='danger'>[src] does not have access to this door.</span>")
+		for (var/obj/machinery/door/door_on_turf in get_turf(target))
+			if (door_on_turf.opens_with_door_remote)
+				door = door_on_turf
+				break
 
-/obj/item/weapon/door_remote/omni
+		if (isnull(door))
+			return
+
+	if (!door.check_access_list(access_list) || !door.requiresID())
+		target.balloon_alert(user, "can't access!")
+		return
+
+	var/obj/machinery/door/airlock/airlock = door
+
+	if (!door.hasPower() || (istype(airlock) && !airlock.canAIControl()))
+		target.balloon_alert(user, mode == WAND_OPEN ? "it won't budge!" : "nothing happens!")
+		return
+
+	switch (mode)
+		if (WAND_OPEN)
+			if (door.density)
+				door.open()
+			else
+				door.close()
+		if (WAND_BOLT)
+			if (!istype(airlock))
+				target.balloon_alert(user, "only airlocks!")
+				return
+
+			if (airlock.locked)
+				airlock.unbolt()
+				log_combat(user, airlock, "unbolted", src)
+			else
+				airlock.bolt()
+				log_combat(user, airlock, "bolted", src)
+		if (WAND_EMERGENCY)
+			if (!istype(airlock))
+				target.balloon_alert(user, "only airlocks!")
+				return
+
+			airlock.emergency = !airlock.emergency
+			airlock.update_appearance(UPDATE_ICON)
+
+/obj/item/door_remote/update_icon_state()
+	var/icon_state_mode
+	switch(mode)
+		if(WAND_OPEN)
+			icon_state_mode = "open"
+		if(WAND_BOLT)
+			icon_state_mode = "bolt"
+		if(WAND_EMERGENCY)
+			icon_state_mode = "emergency"
+
+	icon_state = "[base_icon_state]_[department]_[icon_state_mode]"
+	return ..()
+
+/obj/item/door_remote/omni
 	name = "omni door remote"
 	desc = "This control wand can access any door on the station."
-	icon_state = "gangtool-yellow"
-	region_access = 0
+	department = "omni"
+	region_access = REGION_ALL_STATION
 
-/obj/item/weapon/door_remote/captain
+/obj/item/door_remote/captain
 	name = "command door remote"
-	icon_state = "gangtool-yellow"
-	region_access = 7
+	department = "command"
+	region_access = REGION_COMMAND
 
-/obj/item/weapon/door_remote/chief_engineer
+/obj/item/door_remote/chief_engineer
 	name = "engineering door remote"
-	icon_state = "gangtool-orange"
-	region_access = 5
+	department = "engi"
+	region_access = REGION_ENGINEERING
 
-/obj/item/weapon/door_remote/research_director
+/obj/item/door_remote/research_director
 	name = "research door remote"
-	icon_state = "gangtool-purple"
-	region_access = 4
+	department = "sci"
+	region_access = REGION_RESEARCH
 
-/obj/item/weapon/door_remote/head_of_security
+/obj/item/door_remote/head_of_security
 	name = "security door remote"
-	icon_state = "gangtool-red"
-	region_access = 2
+	department = "security"
+	region_access = REGION_SECURITY
 
-/obj/item/weapon/door_remote/quartermaster
+/obj/item/door_remote/quartermaster
 	name = "supply door remote"
-	icon_state = "gangtool-green"
-	region_access = 6
+	desc = "Remotely controls airlocks. This remote has additional Vault access."
+	department = "cargo"
+	region_access = REGION_SUPPLY
 
-/obj/item/weapon/door_remote/chief_medical_officer
+/obj/item/door_remote/chief_medical_officer
 	name = "medical door remote"
-	icon_state = "gangtool-blue"
-	region_access = 3
+	department = "med"
+	region_access = REGION_MEDBAY
 
-/obj/item/weapon/door_remote/civillian
-	name = "civillian door remote"
-	icon_state = "gangtool-white"
-	region_access = 1
+/obj/item/door_remote/civilian
+	name = "civilian door remote"
+	department = "civilian"
+	region_access = REGION_GENERAL
 
 #undef WAND_OPEN
 #undef WAND_BOLT

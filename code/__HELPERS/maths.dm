@@ -1,170 +1,243 @@
-// Credits to Nickr5 for the useful procs I've taken from his library resource.
+///Calculate the angle between two movables and the west|east coordinate
+/proc/get_angle(atom/movable/start, atom/movable/end)//For beams.
+	if(!start || !end)
+		return 0
+	var/dy =(32 * end.y + end.pixel_y) - (32 * start.y + start.pixel_y)
+	var/dx =(32 * end.x + end.pixel_x) - (32 * start.x + start.pixel_x)
+	return delta_to_angle(dx, dy)
 
-GLOBAL_VAR_INIT(E, 2.71828183)
-GLOBAL_VAR_INIT(Sqrt2, 1.41421356)
+/// Calculate the angle produced by a pair of x and y deltas
+/proc/delta_to_angle(x, y)
+	if(!y)
+		return (x >= 0) ? 90 : 270
+	. = arctan(x/y)
+	if(y < 0)
+		. += 180
+	else if(x < 0)
+		. += 360
 
-// List of square roots for the numbers 1-100.
-GLOBAL_LIST_INIT(sqrtTable, list(1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5,
-                          5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7,
-                          7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-                          8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 10))
+/// Angle between two arbitrary points and horizontal line same as [/proc/get_angle]
+/proc/get_angle_raw(start_x, start_y, start_pixel_x, start_pixel_y, end_x, end_y, end_pixel_x, end_pixel_y)
+	var/dy = (32 * end_y + end_pixel_y) - (32 * start_y + start_pixel_y)
+	var/dx = (32 * end_x + end_pixel_x) - (32 * start_x + start_pixel_x)
+	if(!dy)
+		return (dx >= 0) ? 90 : 270
+	. = arctan(dx/dy)
+	if(dy < 0)
+		. += 180
+	else if(dx < 0)
+		. += 360
 
-/proc/sign(x)
-	return x!=0?x/abs(x):0
+///for getting the angle when animating something's pixel_x and pixel_y
+/proc/get_pixel_angle(y, x)
+	if(!y)
+		return (x >= 0) ? 90 : 270
+	. = arctan(x/y)
+	if(y < 0)
+		. += 180
+	else if(x < 0)
+		. += 360
 
-/proc/Atan2(x, y)
-	if(!x && !y) return 0
-	var/a = arccos(x / sqrt(x*x + y*y))
-	return y >= 0 ? a : -a
+/**
+ * Get a list of turfs in a line from `starting_atom` to `ending_atom`.
+ *
+ * Uses the ultra-fast [Bresenham Line-Drawing Algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
+ */
+/proc/get_line(atom/starting_atom, atom/ending_atom)
+	var/current_x_step = starting_atom.x//start at x and y, then add 1 or -1 to these to get every turf from starting_atom to ending_atom
+	var/current_y_step = starting_atom.y
+	var/starting_z = starting_atom.z
 
-/proc/Ceiling(x, y=1)
-	return -round(-x / y) * y
+	var/list/line = list(get_turf(starting_atom))//get_turf(atom) is faster than locate(x, y, z)
 
-/proc/Floor(x, y=1)
-	return round(x / y) * y
+	var/x_distance = ending_atom.x - current_x_step //x distance
+	var/y_distance = ending_atom.y - current_y_step
 
-#define Clamp(CLVALUE,CLMIN,CLMAX) ( max( (CLMIN), min((CLVALUE), (CLMAX)) ) )
+	var/abs_x_distance = abs(x_distance)//Absolute value of x distance
+	var/abs_y_distance = abs(y_distance)
 
-// cotangent
-/proc/Cot(x)
-	return 1 / Tan(x)
+	var/x_distance_sign = SIGN(x_distance) //Sign of x distance (+ or -)
+	var/y_distance_sign = SIGN(y_distance)
 
-// cosecant
-/proc/Csc(x)
-	return 1 / sin(x)
+	var/x = abs_x_distance >> 1 //Counters for steps taken, setting to distance/2
+	var/y = abs_y_distance >> 1 //Bit-shifting makes me l33t.  It also makes get_line() unnessecarrily fast.
 
-/proc/Default(a, b)
-	return a ? a : b
+	if(abs_x_distance >= abs_y_distance) //x distance is greater than y
+		for(var/distance_counter in 0 to (abs_x_distance - 1))//It'll take abs_x_distance steps to get there
+			y += abs_y_distance
 
-// Greatest Common Divisor - Euclid's algorithm
-/proc/Gcd(a, b)
-	return b ? Gcd(b, a % b) : a
+			if(y >= abs_x_distance) //Every abs_y_distance steps, step once in y direction
+				y -= abs_x_distance
+				current_y_step += y_distance_sign
 
-/proc/Inverse(x)
-	return 1 / x
-
-/proc/IsAboutEqual(a, b, deviation = 0.1)
-	return abs(a - b) <= deviation
-
-/proc/IsEven(x)
-	return x % 2 == 0
-
-// Returns true if val is from min to max, inclusive.
-/proc/IsInRange(val, min, max)
-	return min <= val && val <= max
-
-/proc/IsInteger(x)
-	return round(x) == x
-
-/proc/IsOdd(x)
-	return !IsEven(x)
-
-/proc/IsMultiple(x, y)
-	return x % y == 0
-
-// Least Common Multiple
-/proc/Lcm(a, b)
-	return abs(a) / Gcd(a, b) * abs(b)
-
-// Performs a linear interpolation between a and b.
-// Note that amount=0 returns a, amount=1 returns b, and
-// amount=0.5 returns the mean of a and b.
-/proc/Lerp(a, b, amount = 0.5)
-	return a + (b - a) * amount
-
-//Calculates the sum of a list of numbers.
-/proc/Sum(var/list/data)
-	. = 0
-	for(var/val in data)
-		.+= val
-
-//Calculates the mean of a list of numbers.
-/proc/Mean(var/list/data)
-	. = Sum(data) / (data.len)
-
-
-// Returns the nth root of x.
-/proc/Root(n, x)
-	return x ** (1 / n)
-
-// secant
-/proc/Sec(x)
-	return 1 / cos(x)
-
-// The quadratic formula. Returns a list with the solutions, or an empty list
-// if they are imaginary.
-/proc/SolveQuadratic(a, b, c)
-	ASSERT(a)
-	. = list()
-	var/d		= b*b - 4 * a * c
-	var/bottom  = 2 * a
-	if(d < 0) return
-	var/root = sqrt(d)
-	. += (-b + root) / bottom
-	if(!d) return
-	. += (-b - root) / bottom
-
-// tangent
-/proc/Tan(x)
-	return sin(x) / cos(x)
-
-/proc/ToDegrees(radians)
-				  // 180 / Pi
-	return radians * 57.2957795
-
-/proc/ToRadians(degrees)
-				  // Pi / 180
-	return degrees * 0.0174532925
-
-// Will filter out extra rotations and negative rotations
-// E.g: 540 becomes 180. -180 becomes 180.
-/proc/SimplifyDegrees(degrees)
-	degrees = degrees % 360
-	if(degrees < 0)
-		degrees += 360
-	return degrees
-
-// min is inclusive, max is exclusive
-/proc/Wrap(val, min, max)
-	var/d = max - min
-	var/t = round((val - min) / d)
-	return val - (t * d)
-
-
-//A logarithm that converts an integer to a number scaled between 0 and 1 (can be tweaked to be higher).
-//Currently, this is used for hydroponics-produce sprite transforming, but could be useful for other transform functions.
-/proc/TransformUsingVariable(input, inputmaximum, scaling_modifier = 0)
-
-		var/inputToDegrees = (input/inputmaximum)*180 //Converting from a 0 -> 100 scale to a 0 -> 180 scale. The 0 -> 180 scale corresponds to degrees
-		var/size_factor = ((-cos(inputToDegrees) +1) /2) //returns a value from 0 to 1
-
-		return size_factor + scaling_modifier //scale mod of 0 results in a number from 0 to 1. A scale modifier of +0.5 returns 0.5 to 1.5
-		//to_chat(world, "Transform multiplier of [src] is [size_factor + scaling_modifer]")
-
-
-
-//converts a uniform distributed random number into a normal distributed one
-//since this method produces two random numbers, one is saved for subsequent calls
-//(making the cost negligble for every second call)
-//This will return +/- decimals, situated about mean with standard deviation stddev
-//68% chance that the number is within 1stddev
-//95% chance that the number is within 2stddev
-//98% chance that the number is within 3stddev...etc
-#define ACCURACY 10000
-/proc/gaussian(mean, stddev)
-	var/static/gaussian_next
-	var/R1;var/R2;var/working
-	if(gaussian_next != null)
-		R1 = gaussian_next
-		gaussian_next = null
+			current_x_step += x_distance_sign //Step on in x direction
+			line += locate(current_x_step, current_y_step, starting_z)//Add the turf to the list
 	else
-		do
-			R1 = rand(-ACCURACY,ACCURACY)/ACCURACY
-			R2 = rand(-ACCURACY,ACCURACY)/ACCURACY
-			working = R1*R1 + R2*R2
-		while(working >= 1 || working==0)
-		working = sqrt(-2 * log(working) / working)
-		R1 *= working
-		gaussian_next = R2 * working
-	return (mean + stddev * R1)
-#undef ACCURACY
+		for(var/distance_counter in 0 to (abs_y_distance - 1))
+			x += abs_x_distance
+
+			if(x >= abs_y_distance)
+				x -= abs_y_distance
+				current_x_step += x_distance_sign
+
+			current_y_step += y_distance_sign
+			line += locate(current_x_step, current_y_step, starting_z)
+	return line
+
+/**
+ * Get a list of turfs in a perimeter given the `center_atom` and `radius`.
+ * Automatically rounds down decimals and does not accept values less than positive 1 as they dont play well with it.
+ * Is efficient on large circles but ugly on small ones
+ * Uses [Jesko`s method to the midpoint circle Algorithm](https://en.wikipedia.org/wiki/Midpoint_circle_algorithm).
+ */
+/proc/get_perimeter(atom/center, radius)
+	if(radius < 1)
+		return
+	var/rounded_radius = round(radius)
+	var/x = center.x
+	var/y = center.y
+	var/z = center.z
+	var/t1 = rounded_radius/16
+	var/dx = rounded_radius
+	var/dy = 0
+	var/t2
+	var/list/perimeter = list()
+	while(dx >= dy)
+		perimeter += locate(x + dx, y + dy, z)
+		perimeter += locate(x - dx, y + dy, z)
+		perimeter += locate(x + dx, y - dy, z)
+		perimeter += locate(x - dx, y - dy, z)
+		perimeter += locate(x + dy, y + dx, z)
+		perimeter += locate(x - dy, y + dx, z)
+		perimeter += locate(x + dy, y - dx, z)
+		perimeter += locate(x - dy, y - dx, z)
+		dy += 1
+		t1 += dy
+		t2 = t1 - dx
+		if(t2 > 0)
+			t1 = t2
+			dx -= 1
+	return perimeter
+
+/**
+ * Formats a number into a list representing the si unit.
+ * Access the coefficient with [SI_COEFFICIENT], and access the unit with [SI_UNIT].
+ *
+ * Supports SI exponents between 1e-15 to 1e15, but properly handles numbers outside that range as well.
+ * Arguments:
+ * * value - The number to convert to text. Can be positive or negative.
+ * * unit - The base unit of the number, such as "Pa" or "W".
+ * * maxdecimals - Maximum amount of decimals to display for the final number. Defaults to 1.
+ * Returns: [SI_COEFFICIENT = si unit coefficient, SI_UNIT = prefixed si unit.]
+ */
+/proc/siunit_isolated(value, unit, maxdecimals=1)
+	var/static/list/prefixes = list("q","r","y","z","a","f","p","n","μ","m","","k","M","G","T","P","E","Z","Y","R","Q")
+
+	// We don't have prefixes beyond this point
+	// and this also captures value = 0 which you can't compute the logarithm for
+	// and also byond numbers are floats and doesn't have much precision beyond this point anyway
+	if(abs(value) < 1e-30)
+		. = list(SI_COEFFICIENT = 0, SI_UNIT = " [unit]")
+		return
+
+	var/exponent = clamp(log(10, abs(value)), -30, 30) // Calculate the exponent and clamp it so we don't go outside the prefix list bounds
+	var/divider = 10 ** (round(exponent / 3) * 3) // Rounds the exponent to nearest SI unit and power it back to the full form
+	var/coefficient = round(value / divider, 10 ** -maxdecimals) // Calculate the coefficient and round it to desired decimals
+	var/prefix_index = round(exponent / 3) + 11 // Calculate the index in the prefixes list for this exponent
+
+	// An edge case which happens if we round 999.9 to 0 decimals for example, which gets rounded to 1000
+	// In that case, we manually swap up to the next prefix if there is one available
+	if(coefficient >= 1000 && prefix_index < 21)
+		coefficient /= 1e3
+		prefix_index++
+
+	var/prefix = prefixes[prefix_index]
+	. = list(SI_COEFFICIENT = coefficient, SI_UNIT = " [prefix][unit]")
+
+/**Format a power value in prefixed watts.
+ * Converts from energy if convert is true.
+ * Args:
+ * - power: The value of power to format.
+ * - convert: Whether to convert this from joules.
+ * - datum/controller/subsystem/scheduler: used in the conversion
+ * Returns: The string containing the formatted power.
+ */
+/proc/display_power(power, convert = TRUE, datum/controller/subsystem/scheduler = SSmachines)
+	power = convert ? energy_to_power(power, scheduler) : power
+	return siunit(power, "W", 3)
+
+/**
+ * Format an energy value in prefixed joules.
+ * Arguments
+ *
+ * * units - the value t convert
+ */
+/proc/display_energy(units)
+	return siunit(units, "J", 3)
+
+/**
+ * Converts the joule to the watt, assuming SSmachines tick rate.
+ * Arguments
+ *
+ * * joules - the value in joules to convert
+ * * datum/controller/subsystem/scheduler - the subsystem whos wait time is used in the conversion
+ */
+/proc/energy_to_power(joules, datum/controller/subsystem/scheduler = SSmachines)
+	return joules * (1 SECONDS) / scheduler.wait
+
+/**
+ * Converts the watt to the joule, assuming SSmachines tick rate.
+ * * Arguments
+ *
+ * * joules - the value in joules to convert
+ * * datum/controller/subsystem/scheduler - the subsystem whos wait time is used in the conversion
+ */
+/proc/power_to_energy(watts, datum/controller/subsystem/scheduler = SSmachines)
+	return watts * scheduler.wait / (1 SECONDS)
+
+///chances are 1:value. anyprob(1) will always return true
+/proc/anyprob(value)
+	return (rand(1,value) == value)
+
+///counts the number of bits in Byond's 16-bit width field, in constant time and memory!
+/proc/bit_count(bit_field)
+	var/temp = bit_field - ((bit_field >> 1) & 46811) - ((bit_field >> 2) & 37449) //0133333 and 0111111 respectively
+	temp = ((temp + (temp >> 3)) & 29127) % 63 //070707
+	return temp
+
+/// Returns the name of the mathematical tuple of same length as the number arg (rounded down).
+/proc/make_tuple(number)
+	var/static/list/units_prefix = list("", "un", "duo", "tre", "quattuor", "quin", "sex", "septen", "octo", "novem")
+	var/static/list/tens_prefix = list("", "decem", "vigin", "trigin", "quadragin", "quinquagin", "sexagin", "septuagin", "octogin", "nongen")
+	var/static/list/one_to_nine = list("monuple", "double", "triple", "quadruple", "quintuple", "sextuple", "septuple", "octuple", "nonuple")
+	number = round(number)
+	switch(number)
+		if(0)
+			return "empty tuple"
+		if(1 to 9)
+			return one_to_nine[number]
+		if(10 to 19)
+			return "[units_prefix[(number%10)+1]]decuple"
+		if(20 to 99)
+			return "[units_prefix[(number%10)+1]][tens_prefix[round((number % 100)/10)+1]]tuple"
+		if(100)
+			return "centuple"
+		else //It gets too tedious to use latin prefixes from here.
+			return "[number]-tuple"
+
+/// Takes a value, and a threshold it has to at least match
+/// returns the correctly signed value max'd to the threshold
+/proc/at_least(new_value, threshold)
+	var/sign = SIGN(new_value)
+	// SIGN will return 0 if the value is 0, so we just go to the positive threshold
+	if(!sign)
+		return threshold
+	if(sign == 1)
+		return max(new_value, threshold)
+	if(sign == -1)
+		return min(new_value, threshold * -1)
+
+/// Takes two values x and y, and returns 1/((1/x) + y)
+/// Useful for providing an additive modifier to a value that is used as a divisor, such as `/obj/projectile/var/speed`
+/proc/reciprocal_add(x, y)
+	return 1/((1/x)+y)

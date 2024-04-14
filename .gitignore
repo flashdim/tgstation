@@ -23,7 +23,7 @@
 /v22/**/*
 
 # Ignore compiled linux libs in the root folder, e.g. librust_g.so
-/*.so
+#/*.so
 
 #Ignore compiled files and other files generated during compilation.
 *.mdme
@@ -213,7 +213,7 @@ Temporary Items
 
 # Built auxtools libraries and intermediate files
 aux*.dll
-libaux*.so
+#libaux*.so
 aux*.pdb
 
 # byond-tracy, we intentionally do not ship this and do not want to maintain it

@@ -1,5 +1,5 @@
 # base = ubuntu + full apt update
-FROM ubuntu:noble AS base
+FROM ubuntu:xenial AS base
 RUN dpkg --add-architecture i386 \
     && apt-get update \
     && apt-get upgrade -y \
@@ -12,15 +12,10 @@ FROM base AS byond
 WORKDIR /byond
 
 RUN apt-get install -y --no-install-recommends \
-        libcurl4t64 \
-        libcurl4t64:i386 \
+        libcurl4 \
         curl \
         unzip \
         make \
-        build-essential \
-        python3 \
-        python3-pip \
-        python3-venv \
         libstdc++6:i386
 
 COPY dependencies.sh .
@@ -32,18 +27,11 @@ RUN . ./dependencies.sh \
     && sed -i 's|install:|&\n\tmkdir -p $(MAN_DIR)/man6|' Makefile \
     && make install \
     && chmod 644 /usr/local/byond/man/man6/* \
-    && apt-get purge -y --auto-remove curl make \
+    && apt-get purge -y --auto-remove curl unzip make \
     && cd .. \
     && rm -rf byond byond.zip
 
-RUN command -v DreamMaker \
-    && ls -l /usr/local/byond/bin \
-    && file /usr/local/byond/bin/DreamMaker \
-    && ldd /usr/local/byond/bin/DreamMaker || true
-
-RUN /usr/local/byond/bin/DreamMaker 2>&1 || true
-
-# build = byond + tgstation + dreamluau compiled and deployed to /deploy
+# build = byond + tgstation compiled and deployed to /deploy
 FROM byond AS build
 WORKDIR /tgstation
 
@@ -52,14 +40,7 @@ RUN apt-get install -y --no-install-recommends \
 
 COPY . .
 
-RUN . ./dependencies.sh \
-    && mkdir -p /root/.byond/bin \
-    && curl -fL \
-        "https://github.com/${DREAMLUAU_REPO}/releases/download/${DREAMLUAU_VERSION}/libdreamluau.so" \
-        -o /tgstation/libdreamluau.so \
-    && chmod 755 /tgstation/libdreamluau.so
-
-RUN export PATH="/usr/local/byond/bin:${PATH}" && env TG_BOOTSTRAP_NODE_LINUX=1 tools/build/build.sh \
+RUN env TG_BOOTSTRAP_NODE_LINUX=1 tools/build/build.sh \
     && tools/deploy.sh /deploy
 
 # rust = base + rustc and i686 target
@@ -74,7 +55,7 @@ FROM rust AS rust_g
 WORKDIR /rust_g
 
 RUN apt-get install -y --no-install-recommends \
-        pkg-config \
+        pkg-config:i386 \
         libssl-dev:i386 \
         gcc-multilib \
         git \
@@ -93,13 +74,12 @@ FROM byond
 WORKDIR /tgstation
 
 RUN apt-get install -y --no-install-recommends \
-        libssl3t64:i386 \
+        libssl1.0.0:i386 \
         zlib1g:i386
 
 COPY --from=build /deploy ./
-COPY --from=build /tgstation/libdreamluau.so ./libdreamluau.so
 COPY --from=rust_g /rust_g/target/i686-unknown-linux-gnu/release/librust_g.so ./librust_g.so
 
 VOLUME [ "/tgstation/config", "/tgstation/data" ]
-ENTRYPOINT [ "DreamDaemon", "tgstation.dmb", "-port", "1337", "-webclient", "-trusted", "-close", "-verbose" ]
+ENTRYPOINT [ "DreamDaemon", "tgstation.dmb", "-port", "1337", "-trusted", "-close", "-verbose" ]
 EXPOSE 1337

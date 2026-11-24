@@ -310,7 +310,7 @@ GLOBAL_LIST_INIT(unrecommended_builds, list(
 	var/full_version = "[byond_version].[byond_build ? byond_build : "xxx"]"
 	log_access("Login: [key_name(src)] from [address ? address : "localhost"]-[computer_id] || BYOND v[full_version]")
 
-	var/alert_mob_dupe_login = FALSE
+	var/matching_cid = FALSE
 	var/alert_admin_multikey = FALSE
 	if(CONFIG_GET(flag/log_access))
 		var/list/joined_players = list()
@@ -336,7 +336,7 @@ GLOBAL_LIST_INIT(unrecommended_builds, list(
 
 			if(joined_player_preferences.last_id == computer_id)
 				matched_cid = "Computer ID [computer_id]"
-				alert_mob_dupe_login = TRUE
+				matching_cid = TRUE
 
 			if(isnull(matched_ip) && isnull(matched_cid))
 				continue
@@ -438,22 +438,14 @@ GLOBAL_LIST_INIT(unrecommended_builds, list(
 	initialize_escape_menu()
 	initialize_lobby_menu()
 
-	if(alert_mob_dupe_login && !holder)
+	if(matching_cid && !holder)
 		// Notify admins if the connecting player's CID is configured to be ignored by stickybans
 		if (SSstickyban && (computer_id in SSstickyban.ignored_cids))
 			message_admins("<B>MULTIKEYING: </B></span><span class='notice'>[key_name_admin(src)] Connecting player joined with IGNORED CID [computer_id].")
 			log_admin_private("MULTIKEYING: [key_name(src)] Connecting player joined with IGNORED CID [computer_id].")
-		else
-			// If the CID is not ignored, notify the player with the pop-up.
-			var/dupe_login_message = "Your ComputerID has already logged in with another key this round, please log out of this one NOW or risk being banned!"
-			// Notify admins if the connecting player's CID is a duplicate of another player's CID
-			if (alert_admin_multikey)
-				dupe_login_message += "\nAdmins have been informed."
-				message_admins(span_danger("<B>MULTIKEYING: </B></span><span class='notice'>[key_name_admin(src)] has a matching CID+IP with another player and is clearly multikeying. They have been warned to leave the server or risk getting banned."))
-				log_admin_private("MULTIKEYING: [key_name(src)] has a matching CID+IP with another player and is clearly multikeying. They have been warned to leave the server or risk getting banned.")
-			spawn(0.5 SECONDS) //needs to run during world init, do not convert to add timer
-				alert(mob, dupe_login_message) //players get banned if they don't see this message, do not convert to tgui_alert (or even tg_alert) please.
-				to_chat_immediate(mob, span_danger(dupe_login_message))
+		else if (alert_admin_multikey)
+			message_admins(span_danger("<B>MULTIKEYING: </B></span><span class='notice'>[key_name_admin(src)] has a matching CID+IP with another player and is clearly multikeying."))
+			log_admin_private("MULTIKEYING: [key_name(src)] has a matching CID+IP with another player and is clearly multikeying.")
 
 
 	connection_time = world.time

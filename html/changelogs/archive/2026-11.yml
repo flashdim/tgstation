@@ -336,3 +336,15 @@
       the stat panel), download that file from FTP prompt you get from BYOND, and
       then re-upload it to the server to take effect on later rounds, but it does
       indeed feel a lot easier to edit. This measure is completely optional though.
+2026-11-25:
+  Melbert:
+  - bugfix: Blade and Cosmic heretic can recharge their spells properly
+  - qol: Revamps handheld gene scanner output
+  - bugfix: NTOS Chatroom checks names and messages more thoroughly
+  PapaMichael:
+  - admin: Admins can Control+Alt+Click an atom to open VV on it
+  - admin: Admins can set the next round's station traits in the postround
+2026-11-26:
+  Ghommie:
+  - refactor: Refactored digitigrade legs code a bit. Report any outstanding issue
+      that wasn't previously there.
